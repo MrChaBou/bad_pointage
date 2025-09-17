@@ -203,24 +203,86 @@
     </div>
 
     <script>
-        // Sample data - in a real app, this would come from a database
-        const players = [
-            { id: 'B001', nom: 'Dupont', prenom: 'Jean' },
-            { id: 'B002', nom: 'Martin', prenom: 'Marie' },
-            { id: 'B003', nom: 'Durand', prenom: 'Pierre' },
-            { id: 'B004', nom: 'Lefebvre', prenom: 'Sophie' },
-            { id: 'B005', nom: 'Moreau', prenom: 'Luc' },
-            { id: 'B006', nom: 'Simon', prenom: 'Emma' },
-            { id: 'B007', nom: 'Michel', prenom: 'Paul' },
-            { id: 'B008', nom: 'Leroy', prenom: 'Julie' },
-            { id: 'B009', nom: 'Roux', prenom: 'Thomas' },
-            { id: 'B010', nom: 'David', prenom: 'Claire' },
-            { id: 'B011', nom: 'Bertrand', prenom: 'Antoine' },
-            { id: 'B012', nom: 'Petit', prenom: 'Camille' }
-        ];
-
+        // Sample data - will be loaded from storage if available
+        let players = [];
         let journalEntries = [];
         let resetTimeout = null;
+
+        // Storage functions
+        function savePlayersToStorage() {
+            try {
+                localStorage.setItem('badminton_players', JSON.stringify(players));
+            } catch (e) {
+                console.log('Could not save players to storage');
+            }
+        }
+
+        function loadPlayersFromStorage() {
+            try {
+                const savedPlayers = localStorage.getItem('badminton_players');
+                if (savedPlayers) {
+                    players.length = 0;
+                    players.push(...JSON.parse(savedPlayers));
+                    return true;
+                }
+            } catch (e) {
+                console.log('Could not load players from storage');
+            }
+            return false;
+        }
+
+        function saveJournalToStorage() {
+            try {
+                localStorage.setItem('badminton_journal', JSON.stringify(journalEntries));
+            } catch (e) {
+                console.log('Could not save journal to storage');
+            }
+        }
+
+        function loadJournalFromStorage() {
+            try {
+                const savedJournal = localStorage.getItem('badminton_journal');
+                if (savedJournal) {
+                    journalEntries.length = 0;
+                    journalEntries.push(...JSON.parse(savedJournal));
+                    return true;
+                }
+            } catch (e) {
+                console.log('Could not load journal from storage');
+            }
+            return false;
+        }
+
+        function clearAllStorage() {
+            try {
+                localStorage.removeItem('badminton_players');
+                localStorage.removeItem('badminton_journal');
+            } catch (e) {
+                console.log('Could not clear storage');
+            }
+        }
+
+        // Initialize with sample data if no saved data exists
+        function initializeDefaultPlayers() {
+            if (players.length === 0) {
+                const defaultPlayers = [
+                    { id: 'B001', nom: 'Dupont', prenom: 'Jean' },
+                    { id: 'B002', nom: 'Martin', prenom: 'Marie' },
+                    { id: 'B003', nom: 'Durand', prenom: 'Pierre' },
+                    { id: 'B004', nom: 'Lefebvre', prenom: 'Sophie' },
+                    { id: 'B005', nom: 'Moreau', prenom: 'Luc' },
+                    { id: 'B006', nom: 'Simon', prenom: 'Emma' },
+                    { id: 'B007', nom: 'Michel', prenom: 'Paul' },
+                    { id: 'B008', nom: 'Leroy', prenom: 'Julie' },
+                    { id: 'B009', nom: 'Roux', prenom: 'Thomas' },
+                    { id: 'B010', nom: 'David', prenom: 'Claire' },
+                    { id: 'B011', nom: 'Bertrand', prenom: 'Antoine' },
+                    { id: 'B012', nom: 'Petit', prenom: 'Camille' }
+                ];
+                players.push(...defaultPlayers);
+                savePlayersToStorage();
+            }
+        }
 
         // DOM elements
         const searchInput = document.getElementById('searchInput');
@@ -368,6 +430,7 @@
             };
             
             journalEntries.unshift(entry); // Add to beginning of array
+            saveJournalToStorage(); // Save to storage
         }
 
         function showFeedback() {
@@ -427,6 +490,7 @@
         clearJournal.addEventListener('click', () => {
             showConfirmDialog('Êtes-vous sûr de vouloir effacer tout le journal ?', () => {
                 journalEntries = [];
+                saveJournalToStorage(); // Save to storage
                 updateJournalDisplay();
             });
         });
@@ -524,6 +588,7 @@
                     // Replace current players
                     players.length = 0;
                     players.push(...newPlayers);
+                    savePlayersToStorage(); // Save to storage
                     
                     showImportStatus(`✅ ${newPlayers.length} joueurs importés avec succès`, 'text-badminton-green');
                     updatePlayersPreview();
@@ -664,6 +729,12 @@
             players.length = 0;
             journalEntries.length = 0;
             
+            // Clear storage
+            clearAllStorage();
+            
+            // Reinitialize with default data
+            initializeDefaultPlayers();
+            
             // Reset form
             resetForm();
             
@@ -675,8 +746,27 @@
             showImportStatus('🔄 Toutes les données ont été effacées', 'text-blue-600');
         }
 
-        // Initialize
-        searchInput.focus();
+        // Initialize app on load
+        function initializeApp() {
+            // Try to load saved data
+            const playersLoaded = loadPlayersFromStorage();
+            const journalLoaded = loadJournalFromStorage();
+            
+            // If no players data exists, use default sample data
+            if (!playersLoaded) {
+                initializeDefaultPlayers();
+            }
+            
+            // Update displays
+            updatePlayersPreview();
+            updateJournalDisplay();
+            
+            // Focus search input
+            searchInput.focus();
+        }
+
+        // Start the app when DOM is loaded
+        initializeApp();
     </script>
 </body>
 </html>
