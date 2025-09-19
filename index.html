@@ -1,965 +1,1152 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pointage Badminton</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#5D5CDE',
-            badminton: {
-              green: '#10B981',
-              red: '#EF4444'
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pointage Badminton</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        badminton: {
+                            green: '#10B981',
+                            red: '#EF4444'
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  </script>
+    </script>
 </head>
 <body class="bg-white dark:bg-gray-900 min-h-screen">
-  <!-- Dark mode detection -->
-  <script>
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark');
-    }
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-      if (event.matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    });
-  </script>
+    <!-- Dark mode detection -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
 
-  <div class="max-w-md mx-auto p-4">
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">🏸 Pointage Badminton</h1>
-      <p class="text-gray-600 dark:text-gray-400 text-sm">Recherchez votre nom et cochez votre présence</p>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-      <button id="pointageTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 text-primary shadow-sm">
-        Pointage
-      </button>
-      <button id="journalTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-        Journal
-      </button>
-      <button id="adminTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-        Admin
-      </button>
-    </div>
-
-    <!-- Pointage Section -->
-    <div id="pointageSection">
-      <!-- Search Box -->
-      <div class="mb-6">
-        <label for="searchInput" class="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Tapez votre nom ou prénom (2-3 lettres min.)
-        </label>
-        <input
-          type="text"
-          id="searchInput"
-          class="w-full text-lg p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-800 dark:text-white"
-          placeholder="Ex: Dup, Marie, etc."
-          autocomplete="off"
-          autocapitalize="off"
-        >
-      </div>
-
-      <!-- Player Display -->
-      <div id="playerCard" class="hidden bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border-2 border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <h3 id="playerName" class="text-xl font-semibold text-gray-900 dark:text-white mb-1"></h3>
-            <p id="playerId" class="text-gray-600 dark:text-gray-400 text-base"></p>
-          </div>
-          <div class="ml-4">
-            <label class="flex items-center cursor-pointer">
-              <input type="checkbox" id="presenceCheck" class="sr-only">
-              <div class="relative">
-                <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-lg flex items-center justify-center checkbox-unchecked">
-                  <span class="text-gray-500 dark:text-gray-400 text-xl">☐</span>
-                </div>
-                <div class="w-12 h-12 bg-badminton-green rounded-lg flex items-center justify-center checkbox-checked hidden">
-                  <span class="text-white text-xl">✓</span>
-                </div>
-              </div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Feedback -->
-      <div id="feedback" class="hidden text-center py-4">
-        <div class="inline-flex items-center px-6 py-3 bg-badminton-green text-white rounded-lg text-lg font-medium">
-          <span class="mr-2">✅</span>
-          <span>Présence enregistrée !</span>
-        </div>
-      </div>
-
-      <!-- Instructions -->
-      <div class="text-center text-gray-500 dark:text-gray-400 text-sm mt-8">
-        <p>1. Tapez quelques lettres de votre nom</p>
-        <p>2. Cliquez sur la case pour pointer votre présence</p>
-        <p>3. L'écran se réinitialise automatiquement</p>
-      </div>
-
-      <!-- Footer -->
-      <div class="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
-        Dev par MrChaBou avec ❤️
-      </div>
-    </div>
-
-    <!-- Journal Section -->
-    <div id="journalSection" class="hidden">
-      <div class="mb-4 flex justify-between items-center">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Journal des présences</h2>
-        <button id="clearJournal" class="text-badminton-red hover:text-red-700 text-sm font-medium">
-          Effacer
-        </button>
-      </div>
-
-      <div id="journalList" class="space-y-3">
-        <!-- Journal entries will be added here -->
-      </div>
-
-      <div id="emptyJournal" class="text-center py-8 text-gray-500 dark:text-gray-400">
-        <p>Aucune présence enregistrée</p>
-      </div>
-
-      <!-- Footer -->
-      <div class="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
-        Dev par MrChaBou avec ❤️
-      </div>
-    </div>
-
-    <!-- Admin Section -->
-    <div id="adminSection" class="hidden">
-      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Administration</h2>
-
-      <!-- Import Section -->
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📥 Import des joueurs</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Importez un fichier Excel (.xlsx) avec les colonnes : <strong>Nom</strong>, <strong>Prénom</strong>
-        </p>
-
-        <div class="mb-4">
-          <input type="file" id="importFile" accept=".xlsx,.xls" class="hidden">
-          <button id="importBtn" class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors">
-            📁 Sélectionner un fichier Excel
-          </button>
+    <div class="max-w-md mx-auto p-4">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">🏸 Pointage Badminton</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Recherchez votre nom et cochez votre présence</p>
         </div>
 
-        <div id="importStatus" class="hidden text-sm font-medium"></div>
-
-        <!-- Players Preview -->
-        <div id="playersPreview" class="hidden mt-4">
-          <h4 class="font-medium text-gray-900 dark:text-white mb-2">Joueurs actuels (<span id="playersCount">0</span>)</h4>
-          <div id="playersList" class="max-h-40 overflow-y-auto bg-white dark:bg-gray-900 rounded border p-3 text-sm">
-            <!-- Players list -->
-          </div>
+        <!-- Tabs -->
+        <div class="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button id="pointageTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 text-primary shadow-sm">
+                Pointage
+            </button>
+            <button id="journalTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                Journal
+            </button>
+            <button id="adminTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                Admin
+            </button>
         </div>
-      </div>
 
-      <!-- Export Section -->
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📤 Export des présences</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Exportez le journal des présences au format Excel (.xlsx)
-        </p>
-
-        <button id="exportBtn" class="w-full bg-badminton-green text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-green-700 transition-colors">
-          💾 Exporter les présences
-        </button>
-
-        <div id="exportStatus" class="hidden mt-3 text-sm font-medium"></div>
-      </div>
-
-      <!-- Update Planning Section -->
-      <input id="templateFile" type="file" accept=".xlsx,.xls" class="hidden">
-
-      <div class="grid gap-3 sm:grid-cols-2 mb-3">
-      <button id="chooseTemplateBtn"
-              class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-gray-50">
-          📁 Choisir le planning Excel
-      </button>
-
-      <button id="scanPlanningBtn"
-              class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-gray-50">
-          🔎 Lire les créneaux
-      </button>
-      </div>
-
-      <!-- Choix du créneau / onglet -->
-      <div class="grid gap-3 sm:grid-cols-2 mb-3">
-      <div>
-          <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Créneau (onglet)</label>
-          <select id="slotSelect"
-                  class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm">
-          <option value="">— choisir —</option>
-          </select>
-      </div>
-      <div>
-          <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Date à mettre à jour</label>
-          <select id="dateSelect"
-                  class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm">
-          <option value="">— choisir —</option>
-          </select>
-      </div>
-      </div>
-
-      <div class="grid gap-3 sm:grid-cols-2">
-      <button id="previewColumnBtn"
-              class="bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700">
-          ✅ Générer la colonne “✗/✓” à coller
-      </button>
-
-      <button id="downloadColumnBtn"
-              class="bg-badminton-green text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700" disabled>
-          💾 Télécharger la colonne
-      </button>
-      </div>
-
-      <div id="updateStatus" class="hidden mt-3 text-sm font-medium"></div>
-
-      <!-- Reset Section -->
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔄 Réinitialisation</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Effacez toutes les données pour un nouveau créneau
-        </p>
-
-        <button id="resetAllBtn" class="w-full bg-badminton-red text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-red-700 transition-colors">
-          ⚠️ Tout réinitialiser
-        </button>
-      </div>
-
-      <!-- Footer -->
-      <div class="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
-        Dev par MrChaBou avec ❤️
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // =========================
-    // Données et stockage
-    // =========================
-    let players = [];
-    let journalEntries = [];
-    let resetTimeout = null;
-
-    function savePlayersToStorage() {
-      try { localStorage.setItem('badminton_players', JSON.stringify(players)); } catch {}
-    }
-    function loadPlayersFromStorage() {
-      try {
-        const saved = localStorage.getItem('badminton_players');
-        if (saved) { players.length = 0; players.push(...JSON.parse(saved)); return true; }
-      } catch {}
-      return false;
-    }
-    function saveJournalToStorage() {
-      try { localStorage.setItem('badminton_journal', JSON.stringify(journalEntries)); } catch {}
-    }
-    function loadJournalFromStorage() {
-      try {
-        const saved = localStorage.getItem('badminton_journal');
-        if (saved) { journalEntries.length = 0; journalEntries.push(...JSON.parse(saved)); return true; }
-      } catch {}
-      return false;
-    }
-    function clearAllStorage() {
-      try {
-        localStorage.removeItem('badminton_players');
-        localStorage.removeItem('badminton_journal');
-      } catch {}
-    }
-
-    function initializeDefaultPlayers() {
-      if (players.length === 0) {
-        const defaultPlayers = [
-          { id: 'B001', nom: 'Dupont', prenom: 'Jean' },
-          { id: 'B002', nom: 'Martin', prenom: 'Marie' },
-          { id: 'B003', nom: 'Durand', prenom: 'Pierre' },
-          { id: 'B004', nom: 'Lefebvre', prenom: 'Sophie' },
-          { id: 'B005', nom: 'Moreau', prenom: 'Luc' },
-          { id: 'B006', nom: 'Simon', prenom: 'Emma' },
-          { id: 'B007', nom: 'Michel', prenom: 'Paul' },
-          { id: 'B008', nom: 'Leroy', prenom: 'Julie' },
-          { id: 'B009', nom: 'Roux', prenom: 'Thomas' },
-          { id: 'B010', nom: 'David', prenom: 'Claire' },
-          { id: 'B011', nom: 'Bertrand', prenom: 'Antoine' },
-          { id: 'B012', nom: 'Petit', prenom: 'Camille' }
-        ];
-        players.push(...defaultPlayers);
-        savePlayersToStorage();
-      }
-    }
-
-    // =========================
-    // DOM
-    // =========================
-    const searchInput    = document.getElementById('searchInput');
-    const playerCard     = document.getElementById('playerCard');
-    const playerName     = document.getElementById('playerName');
-    const playerId       = document.getElementById('playerId');
-    const presenceCheck  = document.getElementById('presenceCheck');
-    const feedback       = document.getElementById('feedback');
-    const pointageTab    = document.getElementById('pointageTab');
-    const journalTab     = document.getElementById('journalTab');
-    const adminTab       = document.getElementById('adminTab');
-    const pointageSection= document.getElementById('pointageSection');
-    const journalSection = document.getElementById('journalSection');
-    const adminSection   = document.getElementById('adminSection');
-    const journalList    = document.getElementById('journalList');
-    const emptyJournal   = document.getElementById('emptyJournal');
-    const clearJournal   = document.getElementById('clearJournal');
-
-    // Admin elements
-    const importFile     = document.getElementById('importFile');
-    const importBtn      = document.getElementById('importBtn');
-    const importStatus   = document.getElementById('importStatus');
-    const playersPreview = document.getElementById('playersPreview');
-    const playersCount   = document.getElementById('playersCount');
-    const playersList    = document.getElementById('playersList');
-    const exportBtn      = document.getElementById('exportBtn');
-    const exportStatus   = document.getElementById('exportStatus');
-    const resetAllBtn    = document.getElementById('resetAllBtn');
-
-    // Planning update elements
-    const templateFile       = document.getElementById('templateFile');
-    const chooseTemplateBtn  = document.getElementById('chooseTemplateBtn');
-    const updatePlanningBtn  = document.getElementById('updatePlanningBtn');
-    const updateStatus       = document.getElementById('updateStatus');
-
-    let currentPlayer = null;
-
-    // ---- Planning (nouveau flux "colonne à coller") ----
-    const scanPlanningBtn   = document.getElementById('scanPlanningBtn');
-    const slotSelect        = document.getElementById('slotSelect');
-    const dateSelect        = document.getElementById('dateSelect');
-    const previewColumnBtn  = document.getElementById('previewColumnBtn');
-    const downloadColumnBtn = document.getElementById('downloadColumnBtn');
-
-    let selectedTemplateFile = null;
-    let planningWb = null;          // workbook chargé
-    let planningSlots = [];         // noms d'onglets
-    let lastColumnWbBlob = null;    // blob de la colonne générée
-
-
-    // =========================
-    // Tabs
-    // =========================
-    pointageTab.addEventListener('click', () => switchTab('pointage'));
-    journalTab.addEventListener('click',  () => switchTab('journal'));
-    adminTab.addEventListener('click',    () => switchTab('admin'));
-
-    function switchTab(tab) {
-      [pointageTab, journalTab, adminTab].forEach(t => {
-        t.classList.remove('bg-white','dark:bg-gray-700','text-primary','shadow-sm');
-        t.classList.add('text-gray-600','dark:text-gray-400');
-      });
-      [pointageSection, journalSection, adminSection].forEach(s => s.classList.add('hidden'));
-
-      if (tab === 'pointage') {
-        pointageTab.classList.add('bg-white','dark:bg-gray-700','text-primary','shadow-sm');
-        pointageTab.classList.remove('text-gray-600','dark:text-gray-400');
-        pointageSection.classList.remove('hidden');
-      } else if (tab === 'journal') {
-        journalTab.classList.add('bg-white','dark:bg-gray-700','text-primary','shadow-sm');
-        journalTab.classList.remove('text-gray-600','dark:text-gray-400');
-        journalSection.classList.remove('hidden');
-        updateJournalDisplay();
-      } else {
-        adminTab.classList.add('bg-white','dark:bg-gray-700','text-primary','shadow-sm');
-        adminTab.classList.remove('text-gray-600','dark:text-gray-400');
-        adminSection.classList.remove('hidden');
-        updatePlayersPreview();
-      }
-    }
-
-    // =========================
-    // Recherche & Pointage
-    // =========================
-    searchInput.addEventListener('input', (e) => {
-      const query = e.target.value.trim().toLowerCase();
-      if (query.length < 2) { hidePlayer(); return; }
-      const foundPlayer = players.find(p =>
-        p.nom.toLowerCase().includes(query) || p.prenom.toLowerCase().includes(query)
-      );
-      foundPlayer ? showPlayer(foundPlayer) : hidePlayer();
-    });
-
-    function showPlayer(player) {
-      currentPlayer = player;
-      playerName.textContent = `${player.prenom} ${player.nom}`;
-      playerId.textContent = `ID: ${player.id}`;
-      playerCard.classList.remove('hidden');
-      presenceCheck.checked = false;
-      updateCheckboxDisplay();
-    }
-
-    function hidePlayer() {
-      currentPlayer = null;
-      playerCard.classList.add('hidden');
-    }
-
-    presenceCheck.addEventListener('change', (e) => {
-      if (e.target.checked && currentPlayer) {
-        recordPresence(currentPlayer);
-        updateCheckboxDisplay();
-        showFeedback();
-        scheduleReset();
-      }
-    });
-
-    function updateCheckboxDisplay() {
-      const unchecked = document.querySelector('.checkbox-unchecked');
-      const checked   = document.querySelector('.checkbox-checked');
-      if (presenceCheck.checked) {
-        unchecked.classList.add('hidden');
-        checked.classList.remove('hidden');
-        playerCard.classList.add('bg-green-50','dark:bg-green-900','border-badminton-green');
-      } else {
-        unchecked.classList.remove('hidden');
-        checked.classList.add('hidden');
-        playerCard.classList.remove('bg-green-50','dark:bg-green-900','border-badminton-green');
-      }
-    }
-
-    function recordPresence(player) {
-      const now   = new Date();
-      const yyyy  = now.getFullYear();
-      const mm    = String(now.getMonth()+1).padStart(2,'0');
-      const dd    = String(now.getDate()).padStart(2,'0');
-
-      const entry = {
-        timestamp: now.toLocaleString('fr-FR'),
-        dateKey: `${yyyy}-${mm}-${dd}`,     // clé date normalisée pour l’Excel cible
-        nom: player.nom,
-        prenom: player.prenom,
-        id: player.id,
-        status: 'Présent'
-      };
-
-      journalEntries.unshift(entry);
-      saveJournalToStorage();
-    }
-
-    function showFeedback(){ feedback.classList.remove('hidden'); }
-    function hideFeedback(){ feedback.classList.add('hidden'); }
-    function scheduleReset(){
-      if (resetTimeout) clearTimeout(resetTimeout);
-      resetTimeout = setTimeout(() => resetForm(), 3000);
-    }
-    function resetForm(){
-      searchInput.value = '';
-      hidePlayer();
-      hideFeedback();
-      currentPlayer = null;
-      searchInput.focus();
-    }
-
-    // =========================
-    // Journal
-    // =========================
-    function updateJournalDisplay() {
-      if (journalEntries.length === 0) {
-        emptyJournal.classList.remove('hidden');
-        journalList.innerHTML = '';
-        return;
-      }
-      emptyJournal.classList.add('hidden');
-      journalList.innerHTML = journalEntries.map(entry => `
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <div class="flex justify-between items-start">
-            <div class="flex-1">
-              <h4 class="font-semibold text-gray-900 dark:text-white">${entry.prenom} ${entry.nom}</h4>
-              <p class="text-sm text-gray-600 dark:text-gray-400">ID: ${entry.id}</p>
+        <!-- Pointage Section -->
+        <div id="pointageSection">
+            <!-- Search Box -->
+            <div class="mb-6">
+                <label for="searchInput" class="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tapez votre nom ou prénom (2-3 lettres min.)
+                </label>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="w-full text-lg p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-800 dark:text-white"
+                    placeholder="Ex: Dup, Marie, etc."
+                    autocomplete="off"
+                    autocapitalize="off"
+                >
             </div>
-            <div class="text-right">
-              <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-badminton-green text-white rounded">
-                ✓ ${entry.status}
-              </span>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${entry.timestamp}</p>
+
+            <!-- Player Display -->
+            <div id="playerCard" class="hidden bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border-2 border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h3 id="playerName" class="text-xl font-semibold text-gray-900 dark:text-white mb-1"></h3>
+                        <p id="playerId" class="text-gray-600 dark:text-gray-400 text-base"></p>
+                    </div>
+                    <div class="ml-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="presenceCheck" class="sr-only">
+                            <div class="relative">
+                                <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-lg flex items-center justify-center checkbox-unchecked">
+                                    <span class="text-gray-500 dark:text-gray-400 text-xl">☐</span>
+                                </div>
+                                <div class="w-12 h-12 bg-badminton-green rounded-lg flex items-center justify-center checkbox-checked hidden">
+                                    <span class="text-white text-xl">✓</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <!-- Feedback -->
+            <div id="feedback" class="hidden text-center py-4">
+                <div class="inline-flex items-center px-6 py-3 bg-badminton-green text-white rounded-lg text-lg font-medium">
+                    <span class="mr-2">✅</span>
+                    <span>Présence enregistrée !</span>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="text-center text-gray-500 dark:text-gray-400 text-sm mt-8">
+                <p>1. Tapez quelques lettres de votre nom</p>
+                <p>2. Cliquez sur la case pour pointer votre présence</p>
+                <p>3. L'écran se réinitialise automatiquement</p>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
+                <p>Dev par MrChaBou avec ❤️</p>
+            </div>
         </div>
-      `).join('');
-    }
 
-    clearJournal.addEventListener('click', () => {
-      showConfirmDialog('Êtes-vous sûr de vouloir effacer tout le journal ?', () => {
-        journalEntries = [];
-        saveJournalToStorage();
-        updateJournalDisplay();
-      });
-    });
-
-    function showConfirmDialog(message, onConfirm) {
-      const modal = document.createElement('div');
-      modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-      modal.innerHTML = `
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full">
-          <p class="text-gray-700 dark:text-gray-300 mb-4 text-base">${message}</p>
-          <div class="flex justify-end space-x-3">
-            <button class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-base" onclick="this.closest('.fixed').remove()">Annuler</button>
-            <button class="px-4 py-2 bg-badminton-red text-white hover:bg-red-600 rounded text-base" onclick="this.closest('.fixed').remove(); (${onConfirm.toString()})()">Confirmer</button>
-          </div>
+        <!-- Journal Section -->
+        <div id="journalSection" class="hidden">
+            <div class="mb-4 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Journal des présences</h2>
+                <button id="clearJournal" class="text-badminton-red hover:text-red-700 text-sm font-medium">
+                    Effacer
+                </button>
+            </div>
+            
+            <div id="journalList" class="space-y-3">
+                <!-- Journal entries will be added here -->
+            </div>
+            
+            <div id="emptyJournal" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>Aucune présence enregistrée</p>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
+                <p>Dev par MrChaBou avec ❤️</p>
+            </div>
         </div>
-      `;
-      document.body.appendChild(modal);
-    }
 
-    // =========================
-    // Admin : import / export / reset
-    // =========================
-    importBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', (e) => { const f = e.target.files[0]; if (f) importExcelFile(f); });
-    exportBtn.addEventListener('click', () => exportPresencesToExcel());
-    resetAllBtn.addEventListener('click', () => {
-      showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les présences. Êtes-vous sûr ?', () => resetAllData());
-    });
+        <!-- Admin Section -->
+        <div id="adminSection" class="hidden">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Administration</h2>
+            
+            <!-- Import Section -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📥 Import des joueurs</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Importez un fichier Excel (.xlsx) avec les colonnes : <strong>Nom</strong>, <strong>Prénom</strong>
+                </p>
+                
+                <div class="mb-4">
+                    <input 
+                        type="file" 
+                        id="importFile" 
+                        accept=".xlsx,.xls" 
+                        class="hidden"
+                    >
+                    <button 
+                        id="importBtn" 
+                        class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors"
+                    >
+                        📁 Sélectionner un fichier Excel
+                    </button>
+                </div>
+                
+                <div id="importStatus" class="hidden text-sm font-medium"></div>
+                
+                <!-- Players Preview -->
+                <div id="playersPreview" class="hidden mt-4">
+                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Joueurs actuels (<span id="playersCount">0</span>)</h4>
+                    <div id="playersList" class="max-h-40 overflow-y-auto bg-white dark:bg-gray-900 rounded border p-3 text-sm">
+                        <!-- Players list will be displayed here -->
+                    </div>
+                </div>
+            </div>
 
-    function importExcelFile(file) {
-      showImportStatus('📊 Lecture du fichier...', 'text-blue-600');
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, {type: 'array'});
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          if (jsonData.length === 0) { showImportStatus('❌ Le fichier est vide', 'text-badminton-red'); return; }
+            <!-- Planning Update Section -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📋 Mise à jour du planning</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Importez le planning Excel et générez une colonne à coller
+                </p>
+                
+                <!-- Import Planning -->
+                <div class="mb-4">
+                    <input 
+                        type="file" 
+                        id="planningFile" 
+                        accept=".xlsx,.xls" 
+                        class="hidden"
+                    >
+                    <button 
+                        id="planningBtn" 
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-blue-700 transition-colors"
+                    >
+                        📁 Choisir le planning Excel
+                    </button>
+                </div>
+                
+                <!-- Read Sheets Button -->
+                <div class="mb-4">
+                    <button 
+                        id="readSheetsBtn" 
+                        class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-gray-700 transition-colors disabled:opacity-50"
+                        disabled
+                    >
+                        🔎 Lire les créneaux
+                    </button>
+                </div>
+                
+                <!-- Dropdown Selections -->
+                <div class="mb-4 space-y-3">
+                    <select 
+                        id="sheetSelect" 
+                        class="w-full text-base p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white disabled:opacity-50"
+                        disabled
+                    >
+                        <option value="">— Créneau (onglet) —</option>
+                    </select>
+                    
+                    <select 
+                        id="dateSelect" 
+                        class="w-full text-base p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white disabled:opacity-50"
+                        disabled
+                    >
+                        <option value="">— Date à mettre à jour —</option>
+                    </select>
+                </div>
+                
+                <!-- Generate Column -->
+                <div class="mb-4">
+                    <button 
+                        id="generateColumnBtn" 
+                        class="w-full bg-badminton-green text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-green-700 transition-colors disabled:opacity-50"
+                        disabled
+                    >
+                        ✅ Générer la colonne "✗/✓" à coller
+                    </button>
+                </div>
+                
+                <!-- Download Column -->
+                <div class="mb-4">
+                    <button 
+                        id="downloadColumnBtn" 
+                        class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors disabled:opacity-50"
+                        disabled
+                    >
+                        💾 Télécharger la colonne
+                    </button>
+                </div>
+                
+                <div id="planningStatus" class="hidden text-sm font-medium"></div>
+            </div>
 
-          const required = ['nom','prenom'];
-          const fileColumns = Object.keys(jsonData[0]).map(k => k.toLowerCase());
-          const missing = required.filter(col => !fileColumns.some(fc => fc.includes(col)));
-          if (missing.length > 0) { showImportStatus(`❌ Colonnes manquantes: ${missing.join(', ')}`, 'text-badminton-red'); return; }
-
-          const newPlayers = jsonData.map((row, index) => {
-            const rowKeys = Object.keys(row);
-            const nomKey = rowKeys.find(k => k.toLowerCase().includes('nom'));
-            const prenomKey = rowKeys.find(k => k.toLowerCase().includes('prenom'));
-            return { nom: row[nomKey] || '', prenom: row[prenomKey] || '', id: `B${String(index+1).padStart(3,'0')}` };
-          }).filter(p => p.nom && p.prenom);
-
-          if (newPlayers.length === 0) { showImportStatus('❌ Aucun joueur valide trouvé', 'text-badminton-red'); return; }
-
-          players.length = 0; players.push(...newPlayers); savePlayersToStorage();
-          showImportStatus(`✅ ${newPlayers.length} joueurs importés avec succès`, 'text-badminton-green');
-          updatePlayersPreview(); resetForm();
-        } catch (err) {
-          console.log('Import error:', err);
-          showImportStatus('❌ Erreur lors de la lecture du fichier', 'text-badminton-red');
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function showImportStatus(message, className) {
-      importStatus.textContent = message;
-      importStatus.className = `text-sm font-medium ${className}`;
-      importStatus.classList.remove('hidden');
-      setTimeout(() => importStatus.classList.add('hidden'), 5000);
-    }
-
-    function updatePlayersPreview() {
-      playersCount.textContent = players.length;
-      if (players.length === 0) { playersPreview.classList.add('hidden'); return; }
-      playersPreview.classList.remove('hidden');
-      playersList.innerHTML = players.map(p => `
-        <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700 last:border-0">
-          <span class="text-gray-900 dark:text-white">${p.prenom} ${p.nom}</span>
-          <span class="text-gray-500 dark:text-gray-400 text-xs">${p.id}</span>
+            <!-- Reset Section -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔄 Réinitialisation</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Effacez toutes les données pour un nouveau créneau
+                </p>
+                
+                <button 
+                    id="resetAllBtn" 
+                    class="w-full bg-badminton-red text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-red-700 transition-colors"
+                >
+                    ⚠️ Tout réinitialiser
+                </button>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
+                <p>Dev par MrChaBou avec ❤️</p>
+            </div>
         </div>
-      `).join('');
-    }
+    </div>
 
-    function exportPresencesToExcel() {
-      if (journalEntries.length === 0) { showExportStatus('❌ Aucune présence à exporter', 'text-badminton-red'); return; }
-      showExportStatus('📊 Génération du fichier...', 'text-blue-600');
-      try {
-        const exportData = journalEntries.map(e => ({
-          'Horodatage': e.timestamp,
-          'Nom': e.nom,
-          'Prénom': e.prenom,
-          'Statut': e.status
-        }));
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        ws['!cols'] = [{wch:20},{wch:15},{wch:15},{wch:10}];
-        XLSX.utils.book_append_sheet(wb, ws, "Présences");
+    <script>
+        // Sample data - will be loaded from storage if available
+        let players = [];
+        let journalEntries = [];
+        let resetTimeout = null;
 
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g,'-');
-        const filename = `presences_badminton_${dateStr}_${timeStr}.xlsx`;
-
-        const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-        const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-
-        if (navigator.share) {
-          const file = new File([blob], filename, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-          navigator.share({ files:[file], title:'Export Présences Badminton' })
-            .then(()=>showExportStatus(`✅ Fichier partagé: ${filename}`, 'text-badminton-green'))
-            .catch(()=>downloadFile(blob, filename));
-        } else {
-          downloadFile(blob, filename);
+        // Storage functions
+        function savePlayersToStorage() {
+            try {
+                localStorage.setItem('badminton_players', JSON.stringify(players));
+            } catch (e) {
+                console.log('Could not save players to storage');
+            }
         }
-      } catch (err) {
-        console.log('Export error:', err);
-        showExportStatus('❌ Erreur lors de l\'export', 'text-badminton-red');
-      }
-    }
 
-    function downloadFile(blob, filename) {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none'; a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      window.URL.revokeObjectURL(url); document.body.removeChild(a);
-      showExportStatus(`✅ Fichier téléchargé: ${filename}`, 'text-badminton-green');
-    }
-
-    function showExportStatus(message, className) {
-      exportStatus.textContent = message;
-      exportStatus.className = `mt-3 text-sm font-medium ${className}`;
-      exportStatus.classList.remove('hidden');
-      setTimeout(() => exportStatus.classList.add('hidden'), 5000);
-    }
-
-    function resetAllData() {
-      players.length = 0; journalEntries.length = 0; clearAllStorage();
-      initializeDefaultPlayers(); resetForm();
-      updatePlayersPreview(); updateJournalDisplay();
-      showImportStatus('🔄 Toutes les données ont été effacées', 'text-blue-600');
-    }
-
-    // =========================
-    // MISE À JOUR PLANNING XLSX
-    // =========================
-
-    // Normalisation simple
-    function normalizeName(s){
-    return (s||"").toString()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-        .replace(/\s+/g," ").trim().toUpperCase();
-    }
-
-    // Clé date YYYY-MM-DD depuis une date Excel (cellule d'entête)
-    function dateKeyFromExcelCell(cell){
-    if (cell && typeof cell.v === "number"){
-        const d = XLSX.SSF.parse_date_code(cell.v);
-        if (d && d.y && d.m && d.d){
-        const mm = String(d.m).padStart(2,"0");
-        const dd = String(d.d).padStart(2,"0");
-        return `${d.y}-${mm}-${dd}`;
+        function loadPlayersFromStorage() {
+            try {
+                const savedPlayers = localStorage.getItem('badminton_players');
+                if (savedPlayers) {
+                    players.length = 0;
+                    players.push(...JSON.parse(savedPlayers));
+                    return true;
+                }
+            } catch (e) {
+                console.log('Could not load players from storage');
+            }
+            return false;
         }
-    }
-    if (cell && typeof cell.v === "string"){
-        // tolère "05-sept", "05/09/2025", "05-09-2025"
-        const m = /(\d{1,2})[\/\-\.\s]?([A-Za-zéû]{3,}|\d{1,2})[\/\-\.\s]?(\d{2,4})?/.exec(cell.v.trim());
-        if (m){
-        let dd = m[1].padStart(2,"0");
-        let mm = m[2];
-        let yyyy = m[3];
-        const mois = {jan:1,fév:2,fev:2,mar:3,avr:4,mai:5,juin:6,juil:7,aou:8,aoû:8,sep:9,sept:9,oct:10,nov:11,déc:12,dec:12};
-        if (isNaN(Number(mm))){
-            const k = mm.toLowerCase().slice(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-            mm = mois[k] || 0;
+
+        function saveJournalToStorage() {
+            try {
+                localStorage.setItem('badminton_journal', JSON.stringify(journalEntries));
+            } catch (e) {
+                console.log('Could not save journal to storage');
+            }
         }
-        mm = String(mm).padStart(2,"0");
-        if (!yyyy){ // si année absente on prend année courante
-            yyyy = String(new Date().getFullYear());
-        } else if (yyyy.length===2){
-            yyyy = (yyyy >= "70" ? "19" : "20") + yyyy;
+
+        function loadJournalFromStorage() {
+            try {
+                const savedJournal = localStorage.getItem('badminton_journal');
+                if (savedJournal) {
+                    journalEntries.length = 0;
+                    journalEntries.push(...JSON.parse(savedJournal));
+                    return true;
+                }
+            } catch (e) {
+                console.log('Could not load journal from storage');
+            }
+            return false;
         }
-        return `${yyyy}-${mm}-${dd}`;
+
+        function clearAllStorage() {
+            try {
+                localStorage.removeItem('badminton_players');
+                localStorage.removeItem('badminton_journal');
+            } catch (e) {
+                console.log('Could not clear storage');
+            }
         }
-    }
-    return null;
-    }
 
-    // Récupère infos structure: ligne header, index colonnes NOM/Prénom, colonnes dates
-    function getSheetStructure(ws){
-    const ref = ws['!ref'];
-    if (!ref) return null;
-    const range = XLSX.utils.decode_range(ref);
-
-    let headerRow=-1, colNom=-1, colPrenom=-1;
-    for (let r=range.s.r; r<=Math.min(range.s.r+15, range.e.r); r++){
-        let fNom=-1, fPre=-1;
-        for (let c=range.s.c; c<=range.e.c; c++){
-        const cell = ws[XLSX.utils.encode_cell({r,c})];
-        const txt = (cell && cell.v ? String(cell.v) : "").trim().toUpperCase();
-        if (txt === "NOM") fNom=c;
-        if (txt === "PRÉNOM" || txt === "PRENOM") fPre=c;
+        // Initialize with sample data if no saved data exists
+        function initializeDefaultPlayers() {
+            if (players.length === 0) {
+                const defaultPlayers = [
+                    { id: 'B001', nom: 'Dupont', prenom: 'Jean' },
+                    { id: 'B002', nom: 'Martin', prenom: 'Marie' },
+                    { id: 'B003', nom: 'Durand', prenom: 'Pierre' },
+                    { id: 'B004', nom: 'Lefebvre', prenom: 'Sophie' },
+                    { id: 'B005', nom: 'Moreau', prenom: 'Luc' },
+                    { id: 'B006', nom: 'Simon', prenom: 'Emma' },
+                    { id: 'B007', nom: 'Michel', prenom: 'Paul' },
+                    { id: 'B008', nom: 'Leroy', prenom: 'Julie' },
+                    { id: 'B009', nom: 'Roux', prenom: 'Thomas' },
+                    { id: 'B010', nom: 'David', prenom: 'Claire' },
+                    { id: 'B011', nom: 'Bertrand', prenom: 'Antoine' },
+                    { id: 'B012', nom: 'Petit', prenom: 'Camille' }
+                ];
+                players.push(...defaultPlayers);
+                savePlayersToStorage();
+            }
         }
-        if (fNom!==-1 && fPre!==-1){ headerRow=r; colNom=fNom; colPrenom=fPre; break; }
-    }
-    if (headerRow===-1) return null;
 
-    const dateCols=[];
-    for (let c=colPrenom+1; c<=range.e.c; c++){
-        const key = dateKeyFromExcelCell(ws[XLSX.utils.encode_cell({r:headerRow, c})]);
-        if (key) dateCols.push({c, key, addr:XLSX.utils.encode_cell({r:headerRow,c})});
-    }
-    return { range, headerRow, colNom, colPrenom, dateCols };
-    }
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const playerCard = document.getElementById('playerCard');
+        const playerName = document.getElementById('playerName');
+        const playerId = document.getElementById('playerId');
+        const presenceCheck = document.getElementById('presenceCheck');
+        const feedback = document.getElementById('feedback');
+        const pointageTab = document.getElementById('pointageTab');
+        const journalTab = document.getElementById('journalTab');
+        const adminTab = document.getElementById('adminTab');
+        const pointageSection = document.getElementById('pointageSection');
+        const journalSection = document.getElementById('journalSection');
+        const adminSection = document.getElementById('adminSection');
+        const journalList = document.getElementById('journalList');
+        const emptyJournal = document.getElementById('emptyJournal');
+        const clearJournal = document.getElementById('clearJournal');
+        
+        // Admin elements
+        const importFile = document.getElementById('importFile');
+        const importBtn = document.getElementById('importBtn');
+        const importStatus = document.getElementById('importStatus');
+        const playersPreview = document.getElementById('playersPreview');
+        const playersCount = document.getElementById('playersCount');
+        const playersList = document.getElementById('playersList');
+        const resetAllBtn = document.getElementById('resetAllBtn');
+        
+        // Planning elements
+        const planningFile = document.getElementById('planningFile');
+        const planningBtn = document.getElementById('planningBtn');
+        const readSheetsBtn = document.getElementById('readSheetsBtn');
+        const sheetSelect = document.getElementById('sheetSelect');
+        const dateSelect = document.getElementById('dateSelect');
+        const generateColumnBtn = document.getElementById('generateColumnBtn');
+        const downloadColumnBtn = document.getElementById('downloadColumnBtn');
+        const planningStatus = document.getElementById('planningStatus');
+        
+        // Planning data
+        let planningWorkbook = null;
+        let selectedSheetData = null;
+        let generatedColumn = null;
 
-    // Construit l'ordre des joueurs (NOM|PRÉNOM) tel qu'il apparaît dans le planning
-    function buildRowIndex(ws, structure){
-    const map = [];
-    for (let r = structure.headerRow+1; r <= structure.range.e.r; r++){
-        const nom  = normalizeName(ws[XLSX.utils.encode_cell({r, c:structure.colNom})]?.v);
-        const pre  = normalizeName(ws[XLSX.utils.encode_cell({r, c:structure.colPrenom})]?.v);
-        if (nom || pre) map.push({r, key:`${nom}|${pre}`});
-    }
-    return map;
-    }
+        let currentPlayer = null;
 
-    // Set des présences (filtrable par dateKey)
-    function buildPresenceSet(entries, dateKey){
-    const set = new Set();
-    entries.forEach(e=>{
-        if ((e.status||e.Statut)!=="Présent") return;
-        if (dateKey && e.dateKey !== dateKey) return; // filtre par date choisie
-        const nom = normalizeName(e.nom||e.Nom);
-        const pre = normalizeName(e.prenom||e.Prénom||e["Prénom"]);
-        if (nom && pre) set.add(`${nom}|${pre}`);
-    });
-    return set;
-    }
+        // Tab switching
+        pointageTab.addEventListener('click', () => {
+            switchTab('pointage');
+        });
 
-    // Clé date depuis entête Excel
-    function dateKeyFromExcelCell(cell) {
-      if (cell && typeof cell.v === "number") {
-        const d = XLSX.SSF.parse_date_code(cell.v);
-        if (d && d.y && d.m && d.d) {
-          const mm = String(d.m).padStart(2, "0");
-          const dd = String(d.d).padStart(2, "0");
-          return `${d.y}-${mm}-${dd}`;
+        journalTab.addEventListener('click', () => {
+            switchTab('journal');
+        });
+
+        adminTab.addEventListener('click', () => {
+            switchTab('admin');
+        });
+
+        function switchTab(tab) {
+            // Reset all tabs
+            [pointageTab, journalTab, adminTab].forEach(t => {
+                t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+                t.classList.add('text-gray-600', 'dark:text-gray-400');
+            });
+            
+            // Hide all sections
+            [pointageSection, journalSection, adminSection].forEach(s => {
+                s.classList.add('hidden');
+            });
+            
+            // Activate selected tab and section
+            if (tab === 'pointage') {
+                pointageTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+                pointageTab.classList.remove('text-gray-600', 'dark:text-gray-400');
+                pointageSection.classList.remove('hidden');
+            } else if (tab === 'journal') {
+                journalTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+                journalTab.classList.remove('text-gray-600', 'dark:text-gray-400');
+                journalSection.classList.remove('hidden');
+                updateJournalDisplay();
+            } else if (tab === 'admin') {
+                adminTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
+                adminTab.classList.remove('text-gray-600', 'dark:text-gray-400');
+                adminSection.classList.remove('hidden');
+                updatePlayersPreview();
+            }
         }
-      }
-      if (cell && typeof cell.v === "string") {
-        const m = /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/.exec(cell.v);
-        if (m) {
-          const [_, dd, mm, yyyy] = m;
-          return `${yyyy}-${mm}-${dd}`;
+
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim().toLowerCase();
+            
+            if (query.length < 2) {
+                hidePlayer();
+                return;
+            }
+
+            const foundPlayer = players.find(player => 
+                player.nom.toLowerCase().includes(query) || 
+                player.prenom.toLowerCase().includes(query)
+            );
+
+            if (foundPlayer) {
+                showPlayer(foundPlayer);
+            } else {
+                hidePlayer();
+            }
+        });
+
+        function showPlayer(player) {
+            currentPlayer = player;
+            playerName.textContent = `${player.prenom} ${player.nom}`;
+            playerId.textContent = `ID: ${player.id}`;
+            playerCard.classList.remove('hidden');
+            
+            // Reset checkbox state
+            presenceCheck.checked = false;
+            updateCheckboxDisplay();
         }
-      }
-      return null;
-    }
 
-    // Set des présences: "NOM|PRENOM|YYYY-MM-DD"
-    function buildPresenceSetFromJournal(entries) {
-      const set = new Set();
-      entries.forEach(e => {
-        if ((e.status || e.Statut) !== "Présent") return;
-        const nom    = normalizeName(e.nom || e.Nom);
-        const prenom = normalizeName(e.prenom || e.Prénom || e["Prénom"]);
-        const dkey   = e.dateKey; // déjà normalisée
-        if (nom && prenom && dkey) set.add(`${nom}|${prenom}|${dkey}`);
-      });
-      return set;
-    }
-
-    // Sélection du fichier planning
-    chooseTemplateBtn.addEventListener('click', ()=> templateFile.click());
-    templateFile.addEventListener('change', (e)=>{
-    selectedTemplateFile = e.target.files[0] || null;
-    planningWb = null; planningSlots = [];
-    slotSelect.innerHTML = '<option value="">— choisir —</option>';
-    dateSelect.innerHTML = '<option value="">— choisir —</option>';
-    lastColumnWbBlob = null; downloadColumnBtn.disabled = true;
-
-    showUpdateStatus(
-        selectedTemplateFile ? `✅ Fichier chargé: ${selectedTemplateFile.name}` : '❌ Aucun fichier',
-        selectedTemplateFile ? 'text-badminton-green':'text-badminton-red'
-    );
-    });
-
-    // Lecture des onglets (créneaux)
-    scanPlanningBtn.addEventListener('click', async ()=>{
-    if (!selectedTemplateFile){
-        showUpdateStatus('❌ Choisissez d’abord le fichier planning', 'text-badminton-red'); return;
-    }
-    showUpdateStatus('⏳ Lecture du planning...', 'text-blue-600');
-    const data = new Uint8Array(await selectedTemplateFile.arrayBuffer());
-    planningWb = XLSX.read(data, { type:'array', cellDates:false, cellNF:true, cellText:true });
-
-    // Liste des onglets (tu peux filtrer ici selon ton nommage)
-    planningSlots = planningWb.SheetNames.slice();
-    slotSelect.innerHTML = '<option value="">— choisir —</option>' +
-        planningSlots.map(n=>`<option value="${n}">${n}</option>`).join('');
-    showUpdateStatus(`✅ ${planningSlots.length} onglet(s) détecté(s)`, 'text-badminton-green');
-    });
-
-    // Quand on choisit un créneau → lister les dates de la ligne d’en-tête
-    slotSelect.addEventListener('change', ()=>{
-    dateSelect.innerHTML = '<option value="">— choisir —</option>';
-    lastColumnWbBlob = null; downloadColumnBtn.disabled = true;
-    if (!planningWb || !slotSelect.value) return;
-    const ws = planningWb.Sheets[slotSelect.value];
-    const st = getSheetStructure(ws);
-    if (!st){ showUpdateStatus('❌ Impossible de lire la structure (NOM/Prénom/dates).', 'text-badminton-red'); return; }
-    // On ordonne par position pour l’affichage
-    const opts = st.dateCols.map(d => {
-        const headerCell = ws[d.addr];
-        const label = (headerCell && headerCell.w) ? headerCell.w : (headerCell?.v || d.key);
-        return `<option value="${d.key}">${label}</option>`;
-    }).join('');
-    dateSelect.innerHTML = '<option value="">— choisir —</option>' + opts;
-
-    // Sélectionne par défaut la date du jour si présente
-    const today = new Date();
-    const dk = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    const opt = Array.from(dateSelect.options).find(o => o.value === dk);
-    if (opt) dateSelect.value = dk;
-    });
-
-    // Générer la colonne d’“X” à coller (sans toucher au planning original)
-    previewColumnBtn.addEventListener('click', ()=>{
-    if (!planningWb || !slotSelect.value || !dateSelect.value){
-        showUpdateStatus('❌ Sélectionne un créneau ET une date.', 'text-badminton-red'); return;
-    }
-    const ws = planningWb.Sheets[slotSelect.value];
-    const st = getSheetStructure(ws);
-    if (!st){ showUpdateStatus('❌ Structure planning non reconnue.', 'text-badminton-red'); return; }
-
-    // Ordre des lignes dans le planning
-    const rowIndex = buildRowIndex(ws, st);
-    // Set des présents (uniquement pour la date choisie)
-    const presentSet = buildPresenceSet(journalEntries, dateSelect.value);
-
-    // Fabrique une feuille avec UNE colonne (entête = libellé date visuel), valeurs = "✗"/""
-    const headerCell = ws[st.dateCols.find(d=>d.key===dateSelect.value).addr];
-    const label = (headerCell && headerCell.w) ? headerCell.w : (headerCell?.v || dateSelect.value);
-
-    const outRows = [{ [label]:"" }]; // on garde ligne 1 pour que le collage colle bien sur l’entête (tu pourras commencer à r+1 si besoin)
-    rowIndex.forEach(({key})=>{
-        outRows.push({ [label]: presentSet.has(key) ? "✗" : "" });
-    });
-
-    const outWb = XLSX.utils.book_new();
-    const outWs = XLSX.utils.json_to_sheet(outRows, { skipHeader:false });
-    XLSX.utils.book_append_sheet(outWb, outWs, "ColonneAColller");
-
-    const wbout = XLSX.write(outWb, { bookType:'xlsx', type:'array' });
-    lastColumnWbBlob = new Blob([wbout], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    downloadColumnBtn.disabled = false;
-
-    showUpdateStatus(`✅ Colonne générée pour “${slotSelect.value}” / date “${label}”. Tu peux la télécharger puis la coller dans la colonne de cette date.`, 'text-badminton-green');
-    });
-
-    // Télécharger la colonne
-    downloadColumnBtn.addEventListener('click', ()=>{
-    if (!lastColumnWbBlob) return;
-    const filename = `colonne_presence_${slotSelect.value}_${dateSelect.value}.xlsx`.replace(/\s+/g,'_');
-    downloadFile(lastColumnWbBlob, filename);
-    });
-
-
-    function showUpdateStatus(msg, cls) {
-      updateStatus.textContent = msg;
-      updateStatus.className = `mt-3 text-sm font-medium ${cls}`;
-      updateStatus.classList.remove('hidden');
-    }
-
-    async function updatePlanningExcel(file, entries) {
-      const data = new Uint8Array(await file.arrayBuffer());
-      const wb = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true, cellText: true });
-      const sheetName = wb.SheetNames[0]; // adapte si besoin
-      const ws = wb.Sheets[sheetName];
-
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      let headerRow = -1, colNom = -1, colPrenom = -1;
-
-      // 1) Trouver la ligne d'entêtes
-      for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
-        let foundNom = -1, foundPrenom = -1;
-        for (let c = range.s.c; c <= range.e.c; c++) {
-          const addr = XLSX.utils.encode_cell({ r, c });
-          const cell = ws[addr];
-          const txt = (cell && cell.v ? cell.v.toString() : "").trim().toUpperCase();
-          if (txt === "NOM") foundNom = c;
-          if (txt === "PRÉNOM" || txt === "PRENOM") foundPrenom = c;
+        function hidePlayer() {
+            currentPlayer = null;
+            playerCard.classList.add('hidden');
         }
-        if (foundNom !== -1 && foundPrenom !== -1) {
-          headerRow = r; colNom = foundNom; colPrenom = foundPrenom; break;
+
+        // Checkbox functionality
+        presenceCheck.addEventListener('change', (e) => {
+            if (e.target.checked && currentPlayer) {
+                recordPresence(currentPlayer);
+                updateCheckboxDisplay();
+                showFeedback();
+                scheduleReset();
+            }
+        });
+
+        function updateCheckboxDisplay() {
+            const unchecked = document.querySelector('.checkbox-unchecked');
+            const checked = document.querySelector('.checkbox-checked');
+            
+            if (presenceCheck.checked) {
+                unchecked.classList.add('hidden');
+                checked.classList.remove('hidden');
+                playerCard.classList.add('bg-green-50', 'dark:bg-green-900', 'border-badminton-green');
+            } else {
+                unchecked.classList.remove('hidden');
+                checked.classList.add('hidden');
+                playerCard.classList.remove('bg-green-50', 'dark:bg-green-900', 'border-badminton-green');
+            }
         }
-      }
-      if (headerRow === -1) { showUpdateStatus("❌ Colonnes 'NOM' et 'Prénom' introuvables", 'text-badminton-red'); return; }
 
-      // 2) Colonnes date
-      const dateCols = [];
-      for (let c = colPrenom + 1; c <= range.e.c; c++) {
-        const addr = XLSX.utils.encode_cell({ r: headerRow, c });
-        const cell = ws[addr];
-        const key = dateKeyFromExcelCell(cell);
-        if (key) dateCols.push({ c, key });
-      }
-      if (dateCols.length === 0) { showUpdateStatus("❌ Aucune date valide détectée en entête", 'text-badminton-red'); return; }
+        function recordPresence(player) {
+            const now = new Date();
+            const entry = {
+                timestamp: now.toLocaleString('fr-FR'),
+                nom: player.nom,
+                prenom: player.prenom,
+                id: player.id,
+                status: 'Présent'
+            };
+            
+            journalEntries.unshift(entry); // Add to beginning of array
+            saveJournalToStorage(); // Save to storage
+        }
 
-      // 3) Index des lignes par NOM|PRENOM
-      const rowIndex = new Map();
-      for (let r = headerRow + 1; r <= range.e.r; r++) {
-        const addrNom = XLSX.utils.encode_cell({ r, c: colNom });
-        const addrPre = XLSX.utils.encode_cell({ r, c: colPrenom });
-        const nom = normalizeName(ws[addrNom]?.v);
-        const prenom = normalizeName(ws[addrPre]?.v);
-        if (nom || prenom) rowIndex.set(`${nom}|${prenom}`, r);
-      }
+        function showFeedback() {
+            feedback.classList.remove('hidden');
+        }
 
-      // 4) Set des présences
-      const presenceSet = buildPresenceSetFromJournal(entries);
+        function hideFeedback() {
+            feedback.classList.add('hidden');
+        }
 
-      // 5) Écritures
-      let writes = 0;
-      presenceSet.forEach(key => {
-        const [nom, prenom, dkey] = key.split("|");
-        const row = rowIndex.get(`${nom}|${prenom}`);
-        if (!row) return;
-        const dc = dateCols.find(d => d.key === dkey);
-        if (!dc) return;
-        const addr = XLSX.utils.encode_cell({ r: row, c: dc.c });
-        ws[addr] = { t: 's', v: 'Présent' };
-        writes++;
-      });
+        function scheduleReset() {
+            if (resetTimeout) {
+                clearTimeout(resetTimeout);
+            }
+            
+            resetTimeout = setTimeout(() => {
+                resetForm();
+            }, 3000);
+        }
 
-      if (writes === 0) showUpdateStatus("ℹ️ Aucune correspondance (noms/dates) trouvée dans le planning.", 'text-blue-600');
-      else              showUpdateStatus(`✅ ${writes} case(s) mise(s) à jour`, 'text-badminton-green');
+        function resetForm() {
+            searchInput.value = '';
+            hidePlayer();
+            hideFeedback();
+            currentPlayer = null;
+            searchInput.focus();
+        }
 
-      // 6) Télécharger le planning mis à jour
-      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      downloadFile(blob, `planning_mis_a_jour_${new Date().toISOString().slice(0,10)}.xlsx`);
-    }
+        // Journal functionality
+        function updateJournalDisplay() {
+            if (journalEntries.length === 0) {
+                emptyJournal.classList.remove('hidden');
+                journalList.innerHTML = '';
+                return;
+            }
+            
+            emptyJournal.classList.add('hidden');
+            
+            journalList.innerHTML = journalEntries.map(entry => `
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 dark:text-white">${entry.prenom} ${entry.nom}</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">ID: ${entry.id}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-badminton-green text-white rounded">
+                                ✓ ${entry.status}
+                            </span>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${entry.timestamp}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    // =========================
-    // Init
-    // =========================
-    function initializeApp() {
-      const playersLoaded = loadPlayersFromStorage();
-      const journalLoaded = loadJournalFromStorage();
-      if (!playersLoaded) initializeDefaultPlayers();
-      updatePlayersPreview();
-      updateJournalDisplay();
-      searchInput.focus();
-    }
-    initializeApp();
-  </script>
+        clearJournal.addEventListener('click', () => {
+            showConfirmDialog('Êtes-vous sûr de vouloir effacer tout le journal ?', () => {
+                journalEntries = [];
+                saveJournalToStorage(); // Save to storage
+                updateJournalDisplay();
+            });
+        });
+
+        function showConfirmDialog(message, onConfirm) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full">
+                    <p class="text-gray-700 dark:text-gray-300 mb-4 text-base">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-base" onclick="this.closest('.fixed').remove()">Annuler</button>
+                        <button class="px-4 py-2 bg-badminton-red text-white hover:bg-red-600 rounded text-base" onclick="this.closest('.fixed').remove(); (${onConfirm.toString()})()">Confirmer</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Admin functionality
+        importBtn.addEventListener('click', () => {
+            importFile.click();
+        });
+
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                importExcelFile(file);
+            }
+        });
+
+        // Planning functionality
+        planningBtn.addEventListener('click', () => {
+            planningFile.click();
+        });
+
+        planningFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                importPlanningFile(file);
+            }
+        });
+
+        readSheetsBtn.addEventListener('click', () => {
+            readPlanningSheets();
+        });
+
+        sheetSelect.addEventListener('change', () => {
+            readDatesFromSheet();
+        });
+
+        generateColumnBtn.addEventListener('click', () => {
+            generatePresenceColumn();
+        });
+
+        downloadColumnBtn.addEventListener('click', () => {
+            downloadGeneratedColumn();
+        });
+
+        resetAllBtn.addEventListener('click', () => {
+            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les présences. Êtes-vous sûr ?', () => {
+                resetAllData();
+            });
+        });
+
+        function importExcelFile(file) {
+            showImportStatus('📊 Lecture du fichier...', 'text-blue-600');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // Get first worksheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (jsonData.length === 0) {
+                        showImportStatus('❌ Le fichier est vide', 'text-badminton-red');
+                        return;
+                    }
+                    
+                    // Validate columns (only nom and prenom required)
+                    const requiredColumns = ['nom', 'prenom'];
+                    const firstRow = jsonData[0];
+                    const fileColumns = Object.keys(firstRow).map(k => k.toLowerCase());
+                    
+                    const missingColumns = requiredColumns.filter(col => 
+                        !fileColumns.some(fc => fc.includes(col))
+                    );
+                    
+                    if (missingColumns.length > 0) {
+                        showImportStatus(`❌ Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
+                        return;
+                    }
+                    
+                    // Map data (auto-generate ID)
+                    const newPlayers = jsonData.map((row, index) => {
+                        const rowKeys = Object.keys(row);
+                        const nomKey = rowKeys.find(k => k.toLowerCase().includes('nom'));
+                        const prenomKey = rowKeys.find(k => k.toLowerCase().includes('prenom'));
+                        
+                        return {
+                            nom: row[nomKey] || '',
+                            prenom: row[prenomKey] || '',
+                            id: `B${String(index + 1).padStart(3, '0')}`
+                        };
+                    }).filter(player => player.nom && player.prenom);
+                    
+                    if (newPlayers.length === 0) {
+                        showImportStatus('❌ Aucun joueur valide trouvé', 'text-badminton-red');
+                        return;
+                    }
+                    
+                    // Replace current players
+                    players.length = 0;
+                    players.push(...newPlayers);
+                    savePlayersToStorage(); // Save to storage
+                    
+                    showImportStatus(`✅ ${newPlayers.length} joueurs importés avec succès`, 'text-badminton-green');
+                    updatePlayersPreview();
+                    
+                    // Reset form
+                    resetForm();
+                    
+                } catch (error) {
+                    console.log('Import error:', error);
+                    showImportStatus('❌ Erreur lors de la lecture du fichier', 'text-badminton-red');
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showImportStatus(message, className) {
+            importStatus.textContent = message;
+            importStatus.className = `text-sm font-medium ${className}`;
+            importStatus.classList.remove('hidden');
+            
+            setTimeout(() => {
+                importStatus.classList.add('hidden');
+            }, 5000);
+        }
+
+        function updatePlayersPreview() {
+            playersCount.textContent = players.length;
+            
+            if (players.length === 0) {
+                playersPreview.classList.add('hidden');
+                return;
+            }
+            
+            playersPreview.classList.remove('hidden');
+            playersList.innerHTML = players.map(player => 
+                `<div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                    <span class="text-gray-900 dark:text-white">${player.prenom} ${player.nom}</span>
+                    <span class="text-gray-500 dark:text-gray-400 text-xs">${player.id}</span>
+                </div>`
+            ).join('');
+        }
+
+        function exportPresencesToExcel() {
+            if (journalEntries.length === 0) {
+                showExportStatus('❌ Aucune présence à exporter', 'text-badminton-red');
+                return;
+            }
+            
+            showExportStatus('📊 Génération du fichier...', 'text-blue-600');
+            
+            try {
+                // Prepare data for export
+                const exportData = journalEntries.map(entry => ({
+                    'Horodatage': entry.timestamp,
+                    'Nom': entry.nom,
+                    'Prénom': entry.prenom,
+                    'Statut': entry.status
+                }));
+                
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                
+                // Auto-size columns
+                const colWidths = [
+                    { wch: 20 }, // Horodatage
+                    { wch: 15 }, // Nom
+                    { wch: 15 }, // Prénom
+                    { wch: 10 }  // Statut
+                ];
+                ws['!cols'] = colWidths;
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, "Présences");
+                
+                // Generate filename with current date
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0];
+                const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+                const filename = `presences_badminton_${dateStr}_${timeStr}.xlsx`;
+                
+                // Generate blob for iOS sharing
+                const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+                const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                
+                // Try to use Web Share API (iOS)
+                if (navigator.share) {
+                    const file = new File([blob], filename, {
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    });
+                    
+                    navigator.share({
+                        files: [file],
+                        title: 'Export Présences Badminton'
+                    }).then(() => {
+                        showExportStatus(`✅ Fichier partagé: ${filename}`, 'text-badminton-green');
+                    }).catch(() => {
+                        // Fallback to download
+                        downloadFile(blob, filename);
+                    });
+                } else {
+                    // Fallback to download
+                    downloadFile(blob, filename);
+                }
+                
+            } catch (error) {
+                console.log('Export error:', error);
+                showExportStatus('❌ Erreur lors de l\'export', 'text-badminton-red');
+            }
+        }
+
+        function downloadFile(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showExportStatus(`✅ Fichier téléchargé: ${filename}`, 'text-badminton-green');
+        }
+
+        function showExportStatus(message, className) {
+            exportStatus.textContent = message;
+            exportStatus.className = `mt-3 text-sm font-medium ${className}`;
+            exportStatus.classList.remove('hidden');
+            
+            setTimeout(() => {
+                exportStatus.classList.add('hidden');
+            }, 5000);
+        }
+
+        function resetAllData() {
+            // Clear all data
+            players.length = 0;
+            journalEntries.length = 0;
+            
+            // Clear storage
+            clearAllStorage();
+            
+            // Reinitialize with default data
+            initializeDefaultPlayers();
+            
+            // Reset form
+            resetForm();
+            
+            // Update displays
+            updatePlayersPreview();
+            updateJournalDisplay();
+            
+            // Show confirmation
+            showImportStatus('🔄 Toutes les données ont été effacées', 'text-blue-600');
+        }
+
+        // Initialize app on load
+        function initializeApp() {
+            // Try to load saved data
+            const playersLoaded = loadPlayersFromStorage();
+            const journalLoaded = loadJournalFromStorage();
+            
+            // If no players data exists, use default sample data
+            if (!playersLoaded) {
+                initializeDefaultPlayers();
+            }
+            
+            // Update displays
+            updatePlayersPreview();
+            updateJournalDisplay();
+            
+            // Focus search input
+            searchInput.focus();
+        }
+
+        // Planning functionality implementation
+        function importPlanningFile(file) {
+            showPlanningStatus('📊 Lecture du planning...', 'text-blue-600');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    planningWorkbook = XLSX.read(data, {type: 'array'});
+                    
+                    showPlanningStatus(`✅ Planning chargé - ${planningWorkbook.SheetNames.length} onglet(s) trouvé(s)`, 'text-badminton-green');
+                    
+                    // Enable read sheets button
+                    readSheetsBtn.disabled = false;
+                    readSheetsBtn.classList.remove('opacity-50');
+                    
+                } catch (error) {
+                    console.log('Planning import error:', error);
+                    showPlanningStatus('❌ Erreur lors de la lecture du planning', 'text-badminton-red');
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function readPlanningSheets() {
+            if (!planningWorkbook) {
+                showPlanningStatus('❌ Aucun planning chargé', 'text-badminton-red');
+                return;
+            }
+            
+            // Clear previous options
+            sheetSelect.innerHTML = '<option value="">— Créneau (onglet) —</option>';
+            
+            // Add sheet names to dropdown
+            planningWorkbook.SheetNames.forEach(sheetName => {
+                const option = document.createElement('option');
+                option.value = sheetName;
+                option.textContent = sheetName;
+                sheetSelect.appendChild(option);
+            });
+            
+            // Enable sheet selection
+            sheetSelect.disabled = false;
+            sheetSelect.classList.remove('opacity-50');
+            
+            showPlanningStatus(`✅ ${planningWorkbook.SheetNames.length} créneaux détectés`, 'text-badminton-green');
+        }
+
+        function readDatesFromSheet() {
+            const selectedSheet = sheetSelect.value;
+            if (!selectedSheet || !planningWorkbook) {
+                return;
+            }
+            
+            try {
+                const worksheet = planningWorkbook.Sheets[selectedSheet];
+                selectedSheetData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                if (selectedSheetData.length === 0) {
+                    showPlanningStatus('❌ Onglet vide', 'text-badminton-red');
+                    return;
+                }
+                
+                // Look for date headers in first few rows
+                const dateColumns = [];
+                for (let rowIndex = 0; rowIndex < Math.min(5, selectedSheetData.length); rowIndex++) {
+                    const row = selectedSheetData[rowIndex];
+                    if (row) {
+                        row.forEach((cell, colIndex) => {
+                            if (cell && isDateLike(cell)) {
+                                dateColumns.push({
+                                    columnIndex: colIndex,
+                                    dateText: cell,
+                                    rowIndex: rowIndex
+                                });
+                            }
+                        });
+                    }
+                }
+                
+                // Clear previous options
+                dateSelect.innerHTML = '<option value="">— Date à mettre à jour —</option>';
+                
+                // Add dates to dropdown
+                dateColumns.forEach((dateCol, index) => {
+                    const option = document.createElement('option');
+                    option.value = `${dateCol.columnIndex}|${dateCol.rowIndex}`;
+                    option.textContent = dateCol.dateText;
+                    dateSelect.appendChild(option);
+                });
+                
+                if (dateColumns.length > 0) {
+                    dateSelect.disabled = false;
+                    dateSelect.classList.remove('opacity-50');
+                    generateColumnBtn.disabled = false;
+                    generateColumnBtn.classList.remove('opacity-50');
+                    showPlanningStatus(`✅ ${dateColumns.length} date(s) détectée(s)`, 'text-badminton-green');
+                } else {
+                    showPlanningStatus('❌ Aucune date détectée dans cet onglet', 'text-badminton-red');
+                }
+                
+            } catch (error) {
+                console.log('Date reading error:', error);
+                showPlanningStatus('❌ Erreur lors de la lecture des dates', 'text-badminton-red');
+            }
+        }
+
+        function isDateLike(value) {
+            if (!value) return false;
+            const str = value.toString().toLowerCase();
+            
+            // Check for date patterns
+            const datePatterns = [
+                /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/, // 12/09/2024, 12-09-24
+                /\d{1,2}[-\/]\w{3,4}[-\/]?\d{0,4}/, // 12-sept, 12/sept/24
+                /\w{3,4}[-\/]?\d{1,2}/, // sept-12, sept/12
+                /\d{1,2}\s*\w{3,9}/, // 12 septembre
+                /^\d{2}-\w{3,4}$/, // 05-sept
+            ];
+            
+            return datePatterns.some(pattern => pattern.test(str)) || 
+                   str.includes('sept') || str.includes('oct') || str.includes('nov') || 
+                   str.includes('déc') || str.includes('jan') || str.includes('fév') ||
+                   str.includes('mar') || str.includes('avr') || str.includes('mai') ||
+                   str.includes('juin') || str.includes('juil') || str.includes('août');
+        }
+
+        function generatePresenceColumn() {
+            const selectedDate = dateSelect.value;
+            const selectedSheet = sheetSelect.value;
+            
+            if (!selectedDate || !selectedSheet || !selectedSheetData) {
+                showPlanningStatus('❌ Sélectionnez un créneau et une date', 'text-badminton-red');
+                return;
+            }
+            
+            const [columnIndex, headerRowIndex] = selectedDate.split('|').map(Number);
+            const dateText = selectedSheetData[headerRowIndex][columnIndex];
+            
+            showPlanningStatus('📊 Génération de la colonne...', 'text-blue-600');
+            
+            try {
+                // Find player names in the sheet (look for columns with "nom" or similar)
+                let nameColumnIndex = -1;
+                let firstNameColumnIndex = -1;
+                
+                // Check header row for name columns
+                for (let rowIndex = 0; rowIndex < Math.min(5, selectedSheetData.length); rowIndex++) {
+                    const row = selectedSheetData[rowIndex];
+                    if (row) {
+                        row.forEach((cell, colIndex) => {
+                            if (cell && typeof cell === 'string') {
+                                const cellLower = cell.toLowerCase();
+                                if (cellLower.includes('nom') && nameColumnIndex === -1) {
+                                    nameColumnIndex = colIndex;
+                                }
+                                if (cellLower.includes('prenom') && firstNameColumnIndex === -1) {
+                                    firstNameColumnIndex = colIndex;
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                // Generate the column data
+                const columnData = [];
+                columnData.push([dateText]); // Header
+                
+                // Process each row after headers
+                for (let rowIndex = headerRowIndex + 1; rowIndex < selectedSheetData.length; rowIndex++) {
+                    const row = selectedSheetData[rowIndex];
+                    if (!row || row.length === 0) {
+                        columnData.push(['']);
+                        continue;
+                    }
+                    
+                    // Get player name from this row
+                    const lastName = nameColumnIndex >= 0 ? row[nameColumnIndex] : '';
+                    const firstName = firstNameColumnIndex >= 0 ? row[firstNameColumnIndex] : '';
+                    
+                    if (!lastName && !firstName) {
+                        columnData.push(['']);
+                        continue;
+                    }
+                    
+                    // Check if this player is present in journal
+                    const isPresent = journalEntries.some(entry => {
+                        const entryName = normalizeString(entry.nom);
+                        const entryFirstName = normalizeString(entry.prenom);
+                        const sheetName = normalizeString(lastName);
+                        const sheetFirstName = normalizeString(firstName);
+                        
+                        return (entryName === sheetName && entryFirstName === sheetFirstName) ||
+                               (entryName === sheetName && !firstName) ||
+                               (entryFirstName === sheetFirstName && !lastName);
+                    });
+                    
+                    columnData.push([isPresent ? '✓' : '✗']);
+                }
+                
+                generatedColumn = columnData;
+                
+                // Enable download button
+                downloadColumnBtn.disabled = false;
+                downloadColumnBtn.classList.remove('opacity-50');
+                
+                showPlanningStatus(`✅ Colonne générée avec ${columnData.length - 1} lignes`, 'text-badminton-green');
+                
+            } catch (error) {
+                console.log('Column generation error:', error);
+                showPlanningStatus('❌ Erreur lors de la génération', 'text-badminton-red');
+            }
+        }
+
+        function normalizeString(str) {
+            if (!str) return '';
+            return str.toString().toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') // Remove accents
+                .replace(/[^\w]/g, '') // Remove non-word characters
+                .trim();
+        }
+
+        function downloadGeneratedColumn() {
+            if (!generatedColumn) {
+                showPlanningStatus('❌ Aucune colonne générée', 'text-badminton-red');
+                return;
+            }
+            
+            try {
+                // Create workbook with the column
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(generatedColumn);
+                
+                // Set column width
+                ws['!cols'] = [{ wch: 10 }];
+                
+                XLSX.utils.book_append_sheet(wb, ws, "Colonne");
+                
+                // Generate filename
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0];
+                const sheetName = sheetSelect.value || 'créneau';
+                const filename = `colonne_${sheetName}_${dateStr}.xlsx`;
+                
+                // Download
+                XLSX.writeFile(wb, filename);
+                
+                showPlanningStatus(`✅ Colonne téléchargée: ${filename}`, 'text-badminton-green');
+                
+            } catch (error) {
+                console.log('Download error:', error);
+                showPlanningStatus('❌ Erreur lors du téléchargement', 'text-badminton-red');
+            }
+        }
+
+        function showPlanningStatus(message, className) {
+            planningStatus.textContent = message;
+            planningStatus.className = `text-sm font-medium ${className}`;
+            planningStatus.classList.remove('hidden');
+            
+            setTimeout(() => {
+                planningStatus.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Start the app when DOM is loaded
+        initializeApp();
+    </script>
 </body>
 </html>
