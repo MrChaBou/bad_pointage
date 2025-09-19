@@ -1174,7 +1174,7 @@ function computePresenceColumn(columnIndex, headerRowIndex) {
                            (entryFirstName === sheetFirstName && !lastName);
                 });
                 
-                columnData.push([isPresent ? 'V' : '?']);
+                columnData.push([isPresent ? 'V' : '']);
             }
             
             return { columnData, dateText };
