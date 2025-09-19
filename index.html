@@ -651,7 +651,7 @@
         });
 
         resetAllBtn.addEventListener('click', () => {
-            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les prsences. tes-vous sr ?', () => {
+            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les présences. Êtes-vous sûr ?', () => {
                 resetAllData();
             });
         });
@@ -900,7 +900,7 @@
                     const data = new Uint8Array(e.target.result);
                     planningWorkbook = XLSX.read(data, {type: 'array'});
                     
-                    showPlanningStatus('? Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouv(s)', 'text-badminton-green');
+                    showPlanningStatus('✅ Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouvé(s)', 'text-badminton-green');
                     
                     planningConfig.classList.remove('hidden');
                     readPlanningSheets();
@@ -911,7 +911,7 @@
                     planningWorkbook = null;
                     selectedSheetData = null;
                     resetPlanningUI();
-                    showPlanningStatus('? Erreur lors de la lecture du planning', 'text-badminton-red');
+                    showPlanningStatus('❌ Erreur lors de la lecture du planning', 'text-badminton-red');
                 }
             };
             
@@ -922,7 +922,7 @@
             sheetSelect.innerHTML = '<option value="">- Créneau (onglet) -</option>';
             
             if (!planningWorkbook) {
-                showPlanningStatus('? Aucun planning chargé', 'text-badminton-red');
+                showPlanningStatus('⚠️ Aucun planning chargé', 'text-badminton-red');
                 sheetSelect.disabled = true;
                 sheetSelect.classList.add('opacity-50');
                 selectedSheetData = null;
@@ -931,7 +931,7 @@
             }
             
             if (!planningWorkbook.SheetNames || planningWorkbook.SheetNames.length === 0) {
-                showPlanningStatus('? Aucun onglet disponible', 'text-badminton-red');
+                showPlanningStatus('⚠️ Aucun onglet disponible', 'text-badminton-red');
                 sheetSelect.disabled = true;
                 sheetSelect.classList.add('opacity-50');
                 selectedSheetData = null;
@@ -956,107 +956,169 @@
             readDatesFromSheet();
         }
 
-        function readDatesFromSheet() {
-            dateSelect.innerHTML = '<option value="">- Date à mettre à jour -</option>';
-            dateSelect.disabled = true;
-            dateSelect.classList.add('opacity-50');
-            selectedSheetData = null;
-            
-            if (!planningWorkbook) {
-                updateDownloadPlanningState();
-                return;
-            }
-            
-            const sheetName = sheetSelect.value;
-            if (!sheetName) {
-                updateDownloadPlanningState();
-                return;
-            }
-            
-            try {
-                const worksheet = planningWorkbook.Sheets[sheetName];
-                if (!worksheet) {
-                    showPlanningStatus('? Onglet introuvable', 'text-badminton-red');
-                    updateDownloadPlanningState();
-                    return;
-                }
-                
-                selectedSheetData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-                
-                if (!selectedSheetData || selectedSheetData.length === 0) {
-                    showPlanningStatus('? Onglet vide', 'text-badminton-red');
-                    updateDownloadPlanningState();
-                    return;
-                }
-                
-                const dateColumns = [];
-                for (let rowIndex = 0; rowIndex < Math.min(5, selectedSheetData.length); rowIndex++) {
-                    const row = selectedSheetData[rowIndex];
-                    if (row) {
-                        row.forEach((cell, colIndex) => {
-                            if (cell && isDateLike(cell)) {
-                                dateColumns.push({
-                                    columnIndex: colIndex,
-                                    dateText: cell,
-                                    rowIndex: rowIndex
-                                });
-                            }
-                        });
-                    }
-                }
-                
-                if (dateColumns.length === 0) {
-                    showPlanningStatus('? Aucune date détectée dans cet onglet', 'text-badminton-red');
-                    updateDownloadPlanningState();
-                    return;
-                }
-                
-                dateColumns.forEach(dateCol => {
-                    const option = document.createElement('option');
-                    option.value = `${dateCol.columnIndex}|${dateCol.rowIndex}`;
-                    option.textContent = dateCol.dateText;
-                    dateSelect.appendChild(option);
-                });
-                
-                dateSelect.disabled = false;
-                dateSelect.classList.remove('opacity-50');
-                
-                showPlanningStatus('? ' + dateColumns.length + ' date(s) détectée(s)', 'text-badminton-green');
-                
-                if (dateColumns.length === 1) {
-                    dateSelect.value = `${dateColumns[0].columnIndex}|${dateColumns[0].rowIndex}`;
-                }
-                
-                updateDownloadPlanningState();
-                
-            } catch (error) {
-                console.log('Date reading error:', error);
-                showPlanningStatus('? Erreur lors de la lecture des dates', 'text-badminton-red');
-                updateDownloadPlanningState();
-            }
+        
+function readDatesFromSheet() {
+    dateSelect.innerHTML = '<option value="">- Date à mettre à jour -</option>';
+    dateSelect.disabled = true;
+    dateSelect.classList.add('opacity-50');
+    selectedSheetData = null;
+
+    if (!planningWorkbook) {
+        updateDownloadPlanningState();
+        return;
+    }
+
+    const sheetName = sheetSelect.value;
+    if (!sheetName) {
+        updateDownloadPlanningState();
+        return;
+    }
+
+    try {
+        const worksheet = planningWorkbook.Sheets[sheetName];
+        if (!worksheet) {
+            showPlanningStatus('❌ Onglet introuvable', 'text-badminton-red');
+            updateDownloadPlanningState();
+            return;
         }
 
-        function isDateLike(value) {
-            if (!value) return false;
-            const str = value.toString().toLowerCase();
-            
-            // Check for date patterns
-            const datePatterns = [
-                /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/, // 12/09/2024, 12-09-24
-                /\d{1,2}[-\/]\w{3,4}[-\/]?\d{0,4}/, // 12-sept, 12/sept/24
-                /\w{3,4}[-\/]?\d{1,2}/, // sept-12, sept/12
-                /\d{1,2}\s*\w{3,9}/, // 12 septembre
-                /^\d{2}-\w{3,4}$/, // 05-sept
-            ];
-            
-            return datePatterns.some(pattern => pattern.test(str)) || 
-                   str.includes('sept') || str.includes('oct') || str.includes('nov') || 
-                   str.includes('déc') || str.includes('jan') || str.includes('fév') ||
-                   str.includes('mar') || str.includes('avr') || str.includes('mai') ||
-                   str.includes('juin') || str.includes('juil') || str.includes('août');
+        selectedSheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true });
+
+        if (!selectedSheetData || selectedSheetData.length === 0) {
+            showPlanningStatus('⚠️ Onglet vide', 'text-badminton-red');
+            updateDownloadPlanningState();
+            return;
         }
 
-        function computePresenceColumn(columnIndex, headerRowIndex) {
+        const dateColumns = [];
+        const seenColumns = new Set();
+        const scanLimit = Math.min(selectedSheetData.length, 20);
+
+        for (let rowIndex = 0; rowIndex < scanLimit; rowIndex++) {
+            const row = selectedSheetData[rowIndex];
+            if (!row) continue;
+
+            row.forEach((cell, colIndex) => {
+                const info = extractDateInfo(cell);
+                if (info && !seenColumns.has(colIndex)) {
+                    seenColumns.add(colIndex);
+                    dateColumns.push({
+                        columnIndex: colIndex,
+                        rowIndex,
+                        dateLabel: info.label
+                    });
+                }
+            });
+        }
+
+        if (dateColumns.length === 0) {
+            showPlanningStatus('⚠️ Aucune date détectée dans cet onglet', 'text-badminton-red');
+            updateDownloadPlanningState();
+            return;
+        }
+
+        dateColumns.sort((a, b) => a.columnIndex - b.columnIndex);
+
+        dateColumns.forEach(dateCol => {
+            const option = document.createElement('option');
+            option.value = `${dateCol.columnIndex}|${dateCol.rowIndex}`;
+            option.textContent = dateCol.dateLabel;
+            dateSelect.appendChild(option);
+        });
+
+        dateSelect.disabled = false;
+        dateSelect.classList.remove('opacity-50');
+
+        if (!dateSelect.value && dateColumns.length > 0) {
+            dateSelect.value = `${dateColumns[0].columnIndex}|${dateColumns[0].rowIndex}`;
+        }
+
+        updateDownloadPlanningState();
+        showPlanningStatus(`✅ ${dateColumns.length} date(s) détectée(s)`, 'text-badminton-green');
+
+    } catch (error) {
+        console.log('Date reading error:', error);
+        showPlanningStatus('❌ Erreur lors de la lecture des dates', 'text-badminton-red');
+        updateDownloadPlanningState();
+    }
+}
+
+function extractDateInfo(value) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    if (typeof value === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF && XLSX.SSF.parse_date_code) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) {
+            const jsDate = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+            if (!Number.isNaN(jsDate.getTime())) {
+                return { label: formatDateLabel(jsDate) };
+            }
+        }
+    }
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return { label: formatDateLabel(value) };
+    }
+
+    const str = value.toString().trim();
+    if (!str) {
+        return null;
+    }
+
+    const normalized = normalizeDateCandidate(str);
+    const datePatterns = [
+        /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/,
+        /\d{1,2}[-\/]\w{3,4}[-\/]?\d{0,4}/,
+        /\w{3,9}\s+\d{1,2}/,
+        /\d{1,2}\s+\w{3,9}/,
+        /^\d{2}-\w{3,4}$/
+    ];
+    const monthKeywords = ['jan', 'fev', 'mar', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
+
+    const hasMonth = monthKeywords.some(keyword => normalized.includes(keyword));
+    const matchesPattern = datePatterns.some(pattern => pattern.test(normalized));
+
+    if (hasMonth || matchesPattern) {
+        return { label: cleanDateLabel(str) };
+    }
+
+    return null;
+}
+
+function formatDateLabel(date) {
+    try {
+        return date.toLocaleDateString('fr-FR', {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        }).replace(/\./g, '').replace(/\s+/g, ' ').trim();
+    } catch (error) {
+        return date.toISOString().split('T')[0];
+    }
+}
+
+function cleanDateLabel(text) {
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+function normalizeDateCandidate(str) {
+    return str.toString().toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9\-\/\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function isDateLike(value) {
+            return Boolean(extractDateInfo(value));
+        }
+
+        
+function computePresenceColumn(columnIndex, headerRowIndex) {
             if (!selectedSheetData) {
                 return null;
             }
@@ -1129,7 +1191,7 @@
 
         function downloadUpdatedPlanning() {
             if (!planningWorkbook) {
-                showPlanningStatus('? Aucun planning chargé', 'text-badminton-red');
+                showPlanningStatus('⚠️ Aucun planning chargé', 'text-badminton-red');
                 return;
             }
             
@@ -1137,7 +1199,7 @@
             const selectedDate = dateSelect.value;
             
             if (!selectedSheet || !selectedDate) {
-                showPlanningStatus('? Sélectionnez un créneau et une date', 'text-badminton-red');
+                showPlanningStatus('⚠️ Sélectionnez un créneau et une date', 'text-badminton-red');
                 return;
             }
             
@@ -1148,7 +1210,7 @@
             try {
                 const result = computePresenceColumn(columnIndex, headerRowIndex);
                 if (!result || !result.columnData) {
-                    showPlanningStatus('? Impossible de générer la colonne', 'text-badminton-red');
+                    showPlanningStatus('❌ Impossible de générer la colonne', 'text-badminton-red');
                     return;
                 }
                 
@@ -1157,52 +1219,81 @@
                 const filename = planningFileName || 'planning_mis_a_jour.xlsx';
                 XLSX.writeFile(planningWorkbook, filename);
                 
-                showPlanningStatus('? Planning télécharg: ' + filename, 'text-badminton-green');
+                showPlanningStatus('✅ Planning téléchargé: ' + filename, 'text-badminton-green');
                 
             } catch (error) {
                 console.log('Planning update error:', error);
-                showPlanningStatus('? Erreur lors de la mise à jour du planning', 'text-badminton-red');
+                showPlanningStatus('❌ Erreur lors de la mise à jour du planning', 'text-badminton-red');
             }
         }
         
-        function applyColumnToWorksheet(sheetName, columnIndex, headerRowIndex, columnData) {
-            const worksheet = planningWorkbook.Sheets[sheetName];
-            if (!worksheet) {
-                throw new Error('Sheet not found');
-            }
-            
-            const lastRowIndex = headerRowIndex + columnData.length - 1;
-            let range;
-            if (worksheet['!ref']) {
-                range = XLSX.utils.decode_range(worksheet['!ref']);
+
+
+function applyColumnToWorksheet(sheetName, columnIndex, headerRowIndex, columnData) {
+    const worksheet = planningWorkbook.Sheets[sheetName];
+    if (!worksheet) {
+        throw new Error('Sheet not found');
+    }
+
+    const lastRowIndex = headerRowIndex + columnData.length - 1;
+    let range;
+    if (worksheet['!ref']) {
+        range = XLSX.utils.decode_range(worksheet['!ref']);
+    } else {
+        range = { s: { c: 0, r: 0 }, e: { c: columnIndex, r: lastRowIndex } };
+    }
+
+    range.e.c = Math.max(range.e.c, columnIndex);
+    range.e.r = Math.max(range.e.r, lastRowIndex);
+
+    columnData.forEach((row, offset) => {
+        const value = row[0] ?? '';
+        const targetRow = headerRowIndex + offset;
+        const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: targetRow });
+        const existingCell = worksheet[cellAddress];
+        const cell = existingCell ? { ...existingCell } : {};
+        const existingStyle = existingCell && existingCell.s ? existingCell.s : undefined;
+        let appliedValue = value;
+
+        if (value === '' || value === null) {
+            if (existingCell) {
+                cell.v = '';
+                cell.t = 's';
+                cell.w = '';
+                worksheet[cellAddress] = cell;
             } else {
-                range = { s: { c: 0, r: 0 }, e: { c: columnIndex, r: lastRowIndex } };
-            }
-            
-            range.e.c = Math.max(range.e.c, columnIndex);
-            range.e.r = Math.max(range.e.r, lastRowIndex);
-            
-            columnData.forEach((row, offset) => {
-                const value = row[0] ?? '';
-                const targetRow = headerRowIndex + offset;
-                const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: targetRow });
-                
-                if (value === '' || value === null) {
-                    delete worksheet[cellAddress];
-                } else {
-                    worksheet[cellAddress] = { t: 's', v: value };
-                }
-                
+                appliedValue = '';
                 if (!selectedSheetData[targetRow]) {
                     selectedSheetData[targetRow] = [];
                 }
-                selectedSheetData[targetRow][columnIndex] = value;
-            });
-            
-            worksheet['!ref'] = XLSX.utils.encode_range(range);
+                selectedSheetData[targetRow][columnIndex] = appliedValue;
+                return;
+            }
+        } else {
+            cell.v = value;
+            cell.t = typeof value === 'number' ? 'n' : 's';
+            if (cell.t === 'n' && typeof XLSX !== 'undefined' && XLSX.SSF) {
+                cell.w = XLSX.SSF.format('General', value);
+            } else {
+                delete cell.w;
+            }
+            worksheet[cellAddress] = cell;
         }
-        
-        function updateDownloadPlanningState() {
+
+        if (existingStyle && worksheet[cellAddress]) {
+            worksheet[cellAddress].s = existingStyle;
+        }
+
+        if (!selectedSheetData[targetRow]) {
+            selectedSheetData[targetRow] = [];
+        }
+        selectedSheetData[targetRow][columnIndex] = appliedValue;
+    });
+
+    worksheet['!ref'] = XLSX.utils.encode_range(range);
+}
+
+function updateDownloadPlanningState() {
             const ready = Boolean(planningWorkbook && sheetSelect.value && dateSelect.value);
             downloadPlanningBtn.disabled = !ready;
             if (ready) {
