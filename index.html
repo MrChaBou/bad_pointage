@@ -898,7 +898,7 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    planningWorkbook = XLSX.read(data, {type: 'array'});
+                    planningWorkbook = XLSX.read(data, { type: 'array', cellStyles: true, cellDates: true });
                     
                     showPlanningStatus('✅ Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouvé(s)', 'text-badminton-green');
                     
@@ -1107,7 +1107,7 @@ function cleanDateLabel(text) {
 function normalizeDateCandidate(str) {
     return str.toString().toLowerCase()
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\-\/\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -1229,6 +1229,7 @@ function computePresenceColumn(columnIndex, headerRowIndex) {
         
 
 
+
 function applyColumnToWorksheet(sheetName, columnIndex, headerRowIndex, columnData) {
     const worksheet = planningWorkbook.Sheets[sheetName];
     if (!worksheet) {
@@ -1246,42 +1247,35 @@ function applyColumnToWorksheet(sheetName, columnIndex, headerRowIndex, columnDa
     range.e.c = Math.max(range.e.c, columnIndex);
     range.e.r = Math.max(range.e.r, lastRowIndex);
 
+    const headerAddress = XLSX.utils.encode_cell({ c: columnIndex, r: headerRowIndex });
+    const headerCell = worksheet[headerAddress];
+    const baseStyle = headerCell && headerCell.s ? headerCell.s : undefined;
+
     columnData.forEach((row, offset) => {
         const value = row[0] ?? '';
         const targetRow = headerRowIndex + offset;
         const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: targetRow });
         const existingCell = worksheet[cellAddress];
         const cell = existingCell ? { ...existingCell } : {};
-        const existingStyle = existingCell && existingCell.s ? existingCell.s : undefined;
+        const inheritedStyle = existingCell && existingCell.s ? existingCell.s : baseStyle;
         let appliedValue = value;
 
         if (value === '' || value === null) {
-            if (existingCell) {
-                cell.v = '';
-                cell.t = 's';
-                cell.w = '';
-                worksheet[cellAddress] = cell;
-            } else {
-                appliedValue = '';
-                if (!selectedSheetData[targetRow]) {
-                    selectedSheetData[targetRow] = [];
-                }
-                selectedSheetData[targetRow][columnIndex] = appliedValue;
-                return;
-            }
+            cell.v = '';
+            cell.t = 's';
+            delete cell.w;
+            worksheet[cellAddress] = cell;
         } else {
             cell.v = value;
             cell.t = typeof value === 'number' ? 'n' : 's';
-            if (cell.t === 'n' && typeof XLSX !== 'undefined' && XLSX.SSF) {
-                cell.w = XLSX.SSF.format('General', value);
-            } else {
-                delete cell.w;
+            if (cell.t === 'n') {
+                /* keep existing formatted display */
             }
             worksheet[cellAddress] = cell;
         }
 
-        if (existingStyle && worksheet[cellAddress]) {
-            worksheet[cellAddress].s = existingStyle;
+        if (inheritedStyle && worksheet[cellAddress]) {
+            worksheet[cellAddress].s = inheritedStyle;
         }
 
         if (!selectedSheetData[targetRow]) {
