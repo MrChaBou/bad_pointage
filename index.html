@@ -185,27 +185,51 @@
       </div>
 
       <!-- Update Planning Section -->
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🧩 Mise à jour du planning</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Importez le fichier Excel du planning (avec colonnes <strong>NOM</strong>, <strong>Prénom</strong> et les <strong>dates</strong> en entête de colonnes, en vraies dates Excel).
-        </p>
+      <input id="templateFile" type="file" accept=".xlsx,.xls" class="hidden">
 
-        <input id="templateFile" type="file" accept=".xlsx,.xls" class="hidden">
-        <div class="grid gap-3 sm:grid-cols-2">
-          <button id="chooseTemplateBtn"
-                  class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-gray-50">
-            📁 Choisir le planning Excel
-          </button>
+      <div class="grid gap-3 sm:grid-cols-2 mb-3">
+      <button id="chooseTemplateBtn"
+              class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-gray-50">
+          📁 Choisir le planning Excel
+      </button>
 
-          <button id="updatePlanningBtn"
-                  class="bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700">
-            ✅ Mettre à jour le planning
-          </button>
-        </div>
-
-        <div id="updateStatus" class="hidden mt-3 text-sm font-medium"></div>
+      <button id="scanPlanningBtn"
+              class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-lg font-medium hover:bg-gray-50">
+          🔎 Lire les créneaux
+      </button>
       </div>
+
+      <!-- Choix du créneau / onglet -->
+      <div class="grid gap-3 sm:grid-cols-2 mb-3">
+      <div>
+          <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Créneau (onglet)</label>
+          <select id="slotSelect"
+                  class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm">
+          <option value="">— choisir —</option>
+          </select>
+      </div>
+      <div>
+          <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Date à mettre à jour</label>
+          <select id="dateSelect"
+                  class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2 text-sm">
+          <option value="">— choisir —</option>
+          </select>
+      </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+      <button id="previewColumnBtn"
+              class="bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700">
+          ✅ Générer la colonne “✗/✓” à coller
+      </button>
+
+      <button id="downloadColumnBtn"
+              class="bg-badminton-green text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700" disabled>
+          💾 Télécharger la colonne
+      </button>
+      </div>
+
+      <div id="updateStatus" class="hidden mt-3 text-sm font-medium"></div>
 
       <!-- Reset Section -->
       <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -319,6 +343,19 @@
     const updateStatus       = document.getElementById('updateStatus');
 
     let currentPlayer = null;
+
+    // ---- Planning (nouveau flux "colonne à coller") ----
+    const scanPlanningBtn   = document.getElementById('scanPlanningBtn');
+    const slotSelect        = document.getElementById('slotSelect');
+    const dateSelect        = document.getElementById('dateSelect');
+    const previewColumnBtn  = document.getElementById('previewColumnBtn');
+    const downloadColumnBtn = document.getElementById('downloadColumnBtn');
+
+    let selectedTemplateFile = null;
+    let planningWb = null;          // workbook chargé
+    let planningSlots = [];         // noms d'onglets
+    let lastColumnWbBlob = null;    // blob de la colonne générée
+
 
     // =========================
     // Tabs
@@ -613,12 +650,97 @@
     // =========================
     // MISE À JOUR PLANNING XLSX
     // =========================
-    // Normalisation noms
-    function normalizeName(s) {
-      return (s || "").toString()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, " ")
-        .trim().toUpperCase();
+
+    // Normalisation simple
+    function normalizeName(s){
+    return (s||"").toString()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+        .replace(/\s+/g," ").trim().toUpperCase();
+    }
+
+    // Clé date YYYY-MM-DD depuis une date Excel (cellule d'entête)
+    function dateKeyFromExcelCell(cell){
+    if (cell && typeof cell.v === "number"){
+        const d = XLSX.SSF.parse_date_code(cell.v);
+        if (d && d.y && d.m && d.d){
+        const mm = String(d.m).padStart(2,"0");
+        const dd = String(d.d).padStart(2,"0");
+        return `${d.y}-${mm}-${dd}`;
+        }
+    }
+    if (cell && typeof cell.v === "string"){
+        // tolère "05-sept", "05/09/2025", "05-09-2025"
+        const m = /(\d{1,2})[\/\-\.\s]?([A-Za-zéû]{3,}|\d{1,2})[\/\-\.\s]?(\d{2,4})?/.exec(cell.v.trim());
+        if (m){
+        let dd = m[1].padStart(2,"0");
+        let mm = m[2];
+        let yyyy = m[3];
+        const mois = {jan:1,fév:2,fev:2,mar:3,avr:4,mai:5,juin:6,juil:7,aou:8,aoû:8,sep:9,sept:9,oct:10,nov:11,déc:12,dec:12};
+        if (isNaN(Number(mm))){
+            const k = mm.toLowerCase().slice(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+            mm = mois[k] || 0;
+        }
+        mm = String(mm).padStart(2,"0");
+        if (!yyyy){ // si année absente on prend année courante
+            yyyy = String(new Date().getFullYear());
+        } else if (yyyy.length===2){
+            yyyy = (yyyy >= "70" ? "19" : "20") + yyyy;
+        }
+        return `${yyyy}-${mm}-${dd}`;
+        }
+    }
+    return null;
+    }
+
+    // Récupère infos structure: ligne header, index colonnes NOM/Prénom, colonnes dates
+    function getSheetStructure(ws){
+    const ref = ws['!ref'];
+    if (!ref) return null;
+    const range = XLSX.utils.decode_range(ref);
+
+    let headerRow=-1, colNom=-1, colPrenom=-1;
+    for (let r=range.s.r; r<=Math.min(range.s.r+15, range.e.r); r++){
+        let fNom=-1, fPre=-1;
+        for (let c=range.s.c; c<=range.e.c; c++){
+        const cell = ws[XLSX.utils.encode_cell({r,c})];
+        const txt = (cell && cell.v ? String(cell.v) : "").trim().toUpperCase();
+        if (txt === "NOM") fNom=c;
+        if (txt === "PRÉNOM" || txt === "PRENOM") fPre=c;
+        }
+        if (fNom!==-1 && fPre!==-1){ headerRow=r; colNom=fNom; colPrenom=fPre; break; }
+    }
+    if (headerRow===-1) return null;
+
+    const dateCols=[];
+    for (let c=colPrenom+1; c<=range.e.c; c++){
+        const key = dateKeyFromExcelCell(ws[XLSX.utils.encode_cell({r:headerRow, c})]);
+        if (key) dateCols.push({c, key, addr:XLSX.utils.encode_cell({r:headerRow,c})});
+    }
+    return { range, headerRow, colNom, colPrenom, dateCols };
+    }
+
+    // Construit l'ordre des joueurs (NOM|PRÉNOM) tel qu'il apparaît dans le planning
+    function buildRowIndex(ws, structure){
+    const map = [];
+    for (let r = structure.headerRow+1; r <= structure.range.e.r; r++){
+        const nom  = normalizeName(ws[XLSX.utils.encode_cell({r, c:structure.colNom})]?.v);
+        const pre  = normalizeName(ws[XLSX.utils.encode_cell({r, c:structure.colPrenom})]?.v);
+        if (nom || pre) map.push({r, key:`${nom}|${pre}`});
+    }
+    return map;
+    }
+
+    // Set des présences (filtrable par dateKey)
+    function buildPresenceSet(entries, dateKey){
+    const set = new Set();
+    entries.forEach(e=>{
+        if ((e.status||e.Statut)!=="Présent") return;
+        if (dateKey && e.dateKey !== dateKey) return; // filtre par date choisie
+        const nom = normalizeName(e.nom||e.Nom);
+        const pre = normalizeName(e.prenom||e.Prénom||e["Prénom"]);
+        if (nom && pre) set.add(`${nom}|${pre}`);
+    });
+    return set;
     }
 
     // Clé date depuis entête Excel
@@ -654,31 +776,101 @@
       return set;
     }
 
-    let selectedTemplateFile = null;
-    chooseTemplateBtn.addEventListener('click', () => templateFile.click());
-    templateFile.addEventListener('change', (e) => {
-      selectedTemplateFile = e.target.files[0] || null;
-      showUpdateStatus(
+    // Sélection du fichier planning
+    chooseTemplateBtn.addEventListener('click', ()=> templateFile.click());
+    templateFile.addEventListener('change', (e)=>{
+    selectedTemplateFile = e.target.files[0] || null;
+    planningWb = null; planningSlots = [];
+    slotSelect.innerHTML = '<option value="">— choisir —</option>';
+    dateSelect.innerHTML = '<option value="">— choisir —</option>';
+    lastColumnWbBlob = null; downloadColumnBtn.disabled = true;
+
+    showUpdateStatus(
         selectedTemplateFile ? `✅ Fichier chargé: ${selectedTemplateFile.name}` : '❌ Aucun fichier',
-        selectedTemplateFile ? 'text-badminton-green' : 'text-badminton-red'
-      );
+        selectedTemplateFile ? 'text-badminton-green':'text-badminton-red'
+    );
     });
 
-    updatePlanningBtn.addEventListener('click', async () => {
-      if (!selectedTemplateFile) {
+    // Lecture des onglets (créneaux)
+    scanPlanningBtn.addEventListener('click', async ()=>{
+    if (!selectedTemplateFile){
         showUpdateStatus('❌ Choisissez d’abord le fichier planning', 'text-badminton-red'); return;
-      }
-      if (journalEntries.length === 0) {
-        showUpdateStatus('❌ Le journal des présences est vide', 'text-badminton-red'); return;
-      }
-      showUpdateStatus('⏳ Traitement en cours...', 'text-blue-600');
-      try {
-        await updatePlanningExcel(selectedTemplateFile, journalEntries);
-      } catch (e) {
-        console.error(e);
-        showUpdateStatus('❌ Erreur pendant la mise à jour du planning', 'text-badminton-red');
-      }
+    }
+    showUpdateStatus('⏳ Lecture du planning...', 'text-blue-600');
+    const data = new Uint8Array(await selectedTemplateFile.arrayBuffer());
+    planningWb = XLSX.read(data, { type:'array', cellDates:false, cellNF:true, cellText:true });
+
+    // Liste des onglets (tu peux filtrer ici selon ton nommage)
+    planningSlots = planningWb.SheetNames.slice();
+    slotSelect.innerHTML = '<option value="">— choisir —</option>' +
+        planningSlots.map(n=>`<option value="${n}">${n}</option>`).join('');
+    showUpdateStatus(`✅ ${planningSlots.length} onglet(s) détecté(s)`, 'text-badminton-green');
     });
+
+    // Quand on choisit un créneau → lister les dates de la ligne d’en-tête
+    slotSelect.addEventListener('change', ()=>{
+    dateSelect.innerHTML = '<option value="">— choisir —</option>';
+    lastColumnWbBlob = null; downloadColumnBtn.disabled = true;
+    if (!planningWb || !slotSelect.value) return;
+    const ws = planningWb.Sheets[slotSelect.value];
+    const st = getSheetStructure(ws);
+    if (!st){ showUpdateStatus('❌ Impossible de lire la structure (NOM/Prénom/dates).', 'text-badminton-red'); return; }
+    // On ordonne par position pour l’affichage
+    const opts = st.dateCols.map(d => {
+        const headerCell = ws[d.addr];
+        const label = (headerCell && headerCell.w) ? headerCell.w : (headerCell?.v || d.key);
+        return `<option value="${d.key}">${label}</option>`;
+    }).join('');
+    dateSelect.innerHTML = '<option value="">— choisir —</option>' + opts;
+
+    // Sélectionne par défaut la date du jour si présente
+    const today = new Date();
+    const dk = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const opt = Array.from(dateSelect.options).find(o => o.value === dk);
+    if (opt) dateSelect.value = dk;
+    });
+
+    // Générer la colonne d’“X” à coller (sans toucher au planning original)
+    previewColumnBtn.addEventListener('click', ()=>{
+    if (!planningWb || !slotSelect.value || !dateSelect.value){
+        showUpdateStatus('❌ Sélectionne un créneau ET une date.', 'text-badminton-red'); return;
+    }
+    const ws = planningWb.Sheets[slotSelect.value];
+    const st = getSheetStructure(ws);
+    if (!st){ showUpdateStatus('❌ Structure planning non reconnue.', 'text-badminton-red'); return; }
+
+    // Ordre des lignes dans le planning
+    const rowIndex = buildRowIndex(ws, st);
+    // Set des présents (uniquement pour la date choisie)
+    const presentSet = buildPresenceSet(journalEntries, dateSelect.value);
+
+    // Fabrique une feuille avec UNE colonne (entête = libellé date visuel), valeurs = "✗"/""
+    const headerCell = ws[st.dateCols.find(d=>d.key===dateSelect.value).addr];
+    const label = (headerCell && headerCell.w) ? headerCell.w : (headerCell?.v || dateSelect.value);
+
+    const outRows = [{ [label]:"" }]; // on garde ligne 1 pour que le collage colle bien sur l’entête (tu pourras commencer à r+1 si besoin)
+    rowIndex.forEach(({key})=>{
+        outRows.push({ [label]: presentSet.has(key) ? "✗" : "" });
+    });
+
+    const outWb = XLSX.utils.book_new();
+    const outWs = XLSX.utils.json_to_sheet(outRows, { skipHeader:false });
+    XLSX.utils.book_append_sheet(outWb, outWs, "ColonneAColller");
+
+    const wbout = XLSX.write(outWb, { bookType:'xlsx', type:'array' });
+    lastColumnWbBlob = new Blob([wbout], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    downloadColumnBtn.disabled = false;
+
+    showUpdateStatus(`✅ Colonne générée pour “${slotSelect.value}” / date “${label}”. Tu peux la télécharger puis la coller dans la colonne de cette date.`, 'text-badminton-green');
+    });
+
+    // Télécharger la colonne
+    downloadColumnBtn.addEventListener('click', ()=>{
+    if (!lastColumnWbBlob) return;
+    const filename = `colonne_presence_${slotSelect.value}_${dateSelect.value}.xlsx`.replace(/\s+/g,'_');
+    downloadFile(lastColumnWbBlob, filename);
+    });
+
 
     function showUpdateStatus(msg, cls) {
       updateStatus.textContent = msg;
