@@ -990,8 +990,7 @@ function readDatesFromSheet() {
             return;
         }
 
-        const dateColumns = [];
-        const seenColumns = new Set();
+        const columnCandidates = new Map();
         const scanLimit = Math.min(selectedSheetData.length, 20);
 
         for (let rowIndex = 0; rowIndex < scanLimit; rowIndex++) {
@@ -1000,16 +999,24 @@ function readDatesFromSheet() {
 
             row.forEach((cell, colIndex) => {
                 const info = extractDateInfo(cell);
-                if (info && !seenColumns.has(colIndex)) {
-                    seenColumns.add(colIndex);
-                    dateColumns.push({
+                if (!info) {
+                    return;
+                }
+                const score = info.sortValue ?? rowIndex;
+                const existing = columnCandidates.get(colIndex);
+                if (!existing || score >= existing.score) {
+                    columnCandidates.set(colIndex, {
                         columnIndex: colIndex,
                         rowIndex,
-                        dateLabel: info.label
+                        dateLabel: info.label,
+                        score
                     });
                 }
             });
         }
+
+        const dateColumns = Array.from(columnCandidates.values())
+            .sort((a, b) => a.columnIndex - b.columnIndex);
 
         if (dateColumns.length === 0) {
             showPlanningStatus('⚠️ Aucune date détectée dans cet onglet', 'text-badminton-red');
@@ -1053,13 +1060,13 @@ function extractDateInfo(value) {
         if (parsed) {
             const jsDate = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
             if (!Number.isNaN(jsDate.getTime())) {
-                return { label: formatDateLabel(jsDate) };
+                return { label: formatDateLabel(jsDate), sortValue: jsDate.getTime() };
             }
         }
     }
 
     if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        return { label: formatDateLabel(value) };
+        return { label: formatDateLabel(value), sortValue: value.getTime() };
     }
 
     const str = value.toString().trim();
@@ -1081,7 +1088,7 @@ function extractDateInfo(value) {
     const matchesPattern = datePatterns.some(pattern => pattern.test(normalized));
 
     if (hasMonth || matchesPattern) {
-        return { label: cleanDateLabel(str) };
+        return { label: cleanDateLabel(str), sortValue: null };
     }
 
     return null;
@@ -1090,18 +1097,20 @@ function extractDateInfo(value) {
 function formatDateLabel(date) {
     try {
         return date.toLocaleDateString('fr-FR', {
-            weekday: 'short',
             day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        }).replace(/\./g, '').replace(/\s+/g, ' ').trim();
+            month: 'short'
+        })
+        .replace(/\./g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-$/, '')
+        .trim();
     } catch (error) {
         return date.toISOString().split('T')[0];
     }
 }
 
 function cleanDateLabel(text) {
-    return text.replace(/\s+/g, ' ').trim();
+    return text.replace(/\s+/g, ' ').trim().replace(/\s/g, '-');
 }
 
 function normalizeDateCandidate(str) {
