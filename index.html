@@ -111,11 +111,6 @@
                 <p>2. Cliquez sur la case pour pointer votre présence</p>
                 <p>3. L'écran se réinitialise automatiquement</p>
             </div>
-            
-            <!-- Footer -->
-            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec ❤️</p>
-            </div>
         </div>
 
         <!-- Journal Section -->
@@ -133,11 +128,6 @@
             
             <div id="emptyJournal" class="text-center py-8 text-gray-500 dark:text-gray-400">
                 <p>Aucune présence enregistrée</p>
-            </div>
-            
-            <!-- Footer -->
-            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec ❤️</p>
             </div>
         </div>
 
@@ -178,91 +168,21 @@
                 </div>
             </div>
 
-            <!-- Planning Update Section -->
+            <!-- Export Section -->
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📋 Mise à jour du planning</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📤 Export des présences</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Importez le planning Excel, choisissez un créneau et une date, puis téléchargez le planning mis à jour
+                    Exportez le journal des présences au format Excel (.xlsx)
                 </p>
                 
-                <!-- Import Planning -->
-                <div class="mb-4">
-                    <input 
-                        type="file" 
-                        id="planningFile" 
-                        accept=".xlsx,.xls" 
-                        class="hidden"
-                    >
-                    <button 
-                        id="planningBtn" 
-                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-blue-700 transition-colors"
-                    >
-                        📁 Choisir le planning Excel
-                    </button>
-                </div>
-
-
-                <div id="planningConfig" class="hidden">
-
-                    <div class="mb-4 space-y-3">
-
-                        <select 
-
-                            id="sheetSelect" 
-
-                            class="w-full text-base p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white disabled:opacity-50"
-
-                            disabled
-
-                        >
-
-                            <option value="">- Créneau (onglet) -</option>
-
-                        </select>
-
-                        
-
-                        <select 
-
-                            id="dateSelect" 
-
-                            class="w-full text-base p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white disabled:opacity-50"
-
-                            disabled
-
-                        >
-
-                            <option value="">- Date à mettre à jour -</option>
-
-                        </select>
-
-                    </div>
-
-                    
-
-                    <div class="mb-4">
-
-                        <button 
-
-                            id="downloadPlanningBtn" 
-
-                            class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors disabled:opacity-50"
-
-                            disabled
-
-                        >
-
-                            📥 Télécharger le planning mis à jour
-
-                        </button>
-
-                    </div>
-
-                </div>
-
+                <button 
+                    id="exportBtn" 
+                    class="w-full bg-badminton-green text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-green-700 transition-colors"
+                >
+                    💾 Exporter les présences
+                </button>
                 
-
-<div id="planningStatus" class="hidden text-sm font-medium"></div>
+                <div id="exportStatus" class="hidden mt-3 text-sm font-medium"></div>
             </div>
 
             <!-- Reset Section -->
@@ -278,11 +198,6 @@
                 >
                     ⚠️ Tout réinitialiser
                 </button>
-            </div>
-            
-            <!-- Footer -->
-            <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec ❤️</p>
             </div>
         </div>
     </div>
@@ -393,21 +308,9 @@
         const playersPreview = document.getElementById('playersPreview');
         const playersCount = document.getElementById('playersCount');
         const playersList = document.getElementById('playersList');
+        const exportBtn = document.getElementById('exportBtn');
+        const exportStatus = document.getElementById('exportStatus');
         const resetAllBtn = document.getElementById('resetAllBtn');
-        
-        // Planning elements
-        const planningFile = document.getElementById('planningFile');
-        const planningBtn = document.getElementById('planningBtn');
-        const planningConfig = document.getElementById('planningConfig');
-        const sheetSelect = document.getElementById('sheetSelect');
-        const dateSelect = document.getElementById('dateSelect');
-        const downloadPlanningBtn = document.getElementById('downloadPlanningBtn');
-        const planningStatus = document.getElementById('planningStatus');
-        
-        // Planning data
-        let planningWorkbook = null;
-        let selectedSheetData = null;
-        let planningFileName = '';
 
         let currentPlayer = null;
 
@@ -619,35 +522,8 @@
             }
         });
 
-        // Planning functionality
-        planningBtn.addEventListener('click', () => {
-            planningFile.click();
-        });
-
-        planningFile.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                planningFileName = file.name;
-                resetPlanningUI();
-                importPlanningFile(file);
-            } else {
-                planningFileName = '';
-                resetPlanningUI();
-                planningWorkbook = null;
-                selectedSheetData = null;
-            }
-        });
-
-        sheetSelect.addEventListener('change', () => {
-            readDatesFromSheet();
-        });
-
-        dateSelect.addEventListener('change', () => {
-            updateDownloadPlanningState();
-        });
-
-        downloadPlanningBtn.addEventListener('click', () => {
-            downloadUpdatedPlanning();
+        exportBtn.addEventListener('click', () => {
+            exportPresencesToExcel();
         });
 
         resetAllBtn.addEventListener('click', () => {
@@ -657,7 +533,7 @@
         });
 
         function importExcelFile(file) {
-            showImportStatus('📄 Lecture du fichier...', 'text-blue-600');
+            showImportStatus('📊 Lecture du fichier...', 'text-blue-600');
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -673,7 +549,7 @@
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
                     if (jsonData.length === 0) {
-                        showImportStatus('⚠️ Le fichier est vide', 'text-badminton-red');
+                        showImportStatus('❌ Le fichier est vide', 'text-badminton-red');
                         return;
                     }
                     
@@ -687,7 +563,7 @@
                     );
                     
                     if (missingColumns.length > 0) {
-                        showImportStatus(`⚠️ Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
+                        showImportStatus(`❌ Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
                         return;
                     }
                     
@@ -705,7 +581,7 @@
                     }).filter(player => player.nom && player.prenom);
                     
                     if (newPlayers.length === 0) {
-                        showImportStatus('⚠️ Aucun joueur valide trouvé', 'text-badminton-red');
+                        showImportStatus('❌ Aucun joueur valide trouvé', 'text-badminton-red');
                         return;
                     }
                     
@@ -758,7 +634,7 @@
 
         function exportPresencesToExcel() {
             if (journalEntries.length === 0) {
-                showExportStatus('⚠️ Aucune présence à exporter', 'text-badminton-red');
+                showExportStatus('❌ Aucune présence à exporter', 'text-badminton-red');
                 return;
             }
             
@@ -884,454 +760,9 @@
             // Update displays
             updatePlayersPreview();
             updateJournalDisplay();
-            resetPlanningUI();
             
             // Focus search input
             searchInput.focus();
-        }
-
-        // Planning functionality implementation
-        function importPlanningFile(file) {
-            showPlanningStatus('📖 Lecture du planning...', 'text-blue-600');
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    planningWorkbook = XLSX.read(data, { type: 'array', cellStyles: true, cellDates: true });
-                    
-                    showPlanningStatus('✅ Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouvé(s)', 'text-badminton-green');
-                    
-                    planningConfig.classList.remove('hidden');
-                    readPlanningSheets();
-                    updateDownloadPlanningState();
-                    
-                } catch (error) {
-                    console.log('Planning import error:', error);
-                    planningWorkbook = null;
-                    selectedSheetData = null;
-                    resetPlanningUI();
-                    showPlanningStatus('❌ Erreur lors de la lecture du planning', 'text-badminton-red');
-                }
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-
-        function readPlanningSheets() {
-            sheetSelect.innerHTML = '<option value="">- Créneau (onglet) -</option>';
-            
-            if (!planningWorkbook) {
-                showPlanningStatus('⚠️ Aucun planning chargé', 'text-badminton-red');
-                sheetSelect.disabled = true;
-                sheetSelect.classList.add('opacity-50');
-                selectedSheetData = null;
-                updateDownloadPlanningState();
-                return;
-            }
-            
-            if (!planningWorkbook.SheetNames || planningWorkbook.SheetNames.length === 0) {
-                showPlanningStatus('⚠️ Aucun onglet disponible', 'text-badminton-red');
-                sheetSelect.disabled = true;
-                sheetSelect.classList.add('opacity-50');
-                selectedSheetData = null;
-                updateDownloadPlanningState();
-                return;
-            }
-            
-            planningWorkbook.SheetNames.forEach(sheetName => {
-                const option = document.createElement('option');
-                option.value = sheetName;
-                option.textContent = sheetName;
-                sheetSelect.appendChild(option);
-            });
-            
-            sheetSelect.disabled = false;
-            sheetSelect.classList.remove('opacity-50');
-            
-            if (!sheetSelect.value && planningWorkbook.SheetNames.length > 0) {
-                sheetSelect.value = planningWorkbook.SheetNames[0];
-            }
-            
-            readDatesFromSheet();
-        }
-
-        
-function readDatesFromSheet() {
-    dateSelect.innerHTML = '<option value="">- Date à mettre à jour -</option>';
-    dateSelect.disabled = true;
-    dateSelect.classList.add('opacity-50');
-    selectedSheetData = null;
-
-    if (!planningWorkbook) {
-        updateDownloadPlanningState();
-        return;
-    }
-
-    const sheetName = sheetSelect.value;
-    if (!sheetName) {
-        updateDownloadPlanningState();
-        return;
-    }
-
-    try {
-        const worksheet = planningWorkbook.Sheets[sheetName];
-        if (!worksheet) {
-            showPlanningStatus('❌ Onglet introuvable', 'text-badminton-red');
-            updateDownloadPlanningState();
-            return;
-        }
-
-        selectedSheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true });
-
-        if (!selectedSheetData || selectedSheetData.length === 0) {
-            showPlanningStatus('⚠️ Onglet vide', 'text-badminton-red');
-            updateDownloadPlanningState();
-            return;
-        }
-
-        const columnCandidates = new Map();
-        const scanLimit = Math.min(selectedSheetData.length, 20);
-
-        for (let rowIndex = 0; rowIndex < scanLimit; rowIndex++) {
-            const row = selectedSheetData[rowIndex];
-            if (!row) continue;
-
-            row.forEach((cell, colIndex) => {
-                const info = extractDateInfo(cell);
-                if (!info) {
-                    return;
-                }
-                const score = info.sortValue ?? rowIndex;
-                const existing = columnCandidates.get(colIndex);
-                if (!existing || score >= existing.score) {
-                    columnCandidates.set(colIndex, {
-                        columnIndex: colIndex,
-                        rowIndex,
-                        dateLabel: info.label,
-                        score
-                    });
-                }
-            });
-        }
-
-        const dateColumns = Array.from(columnCandidates.values())
-            .sort((a, b) => a.columnIndex - b.columnIndex);
-
-        if (dateColumns.length === 0) {
-            showPlanningStatus('⚠️ Aucune date détectée dans cet onglet', 'text-badminton-red');
-            updateDownloadPlanningState();
-            return;
-        }
-
-        dateColumns.sort((a, b) => a.columnIndex - b.columnIndex);
-
-        dateColumns.forEach(dateCol => {
-            const option = document.createElement('option');
-            option.value = `${dateCol.columnIndex}|${dateCol.rowIndex}`;
-            option.textContent = dateCol.dateLabel;
-            dateSelect.appendChild(option);
-        });
-
-        dateSelect.disabled = false;
-        dateSelect.classList.remove('opacity-50');
-
-        if (!dateSelect.value && dateColumns.length > 0) {
-            dateSelect.value = `${dateColumns[0].columnIndex}|${dateColumns[0].rowIndex}`;
-        }
-
-        updateDownloadPlanningState();
-        showPlanningStatus(`✅ ${dateColumns.length} date(s) détectée(s)`, 'text-badminton-green');
-
-    } catch (error) {
-        console.log('Date reading error:', error);
-        showPlanningStatus('❌ Erreur lors de la lecture des dates', 'text-badminton-red');
-        updateDownloadPlanningState();
-    }
-}
-
-function extractDateInfo(value) {
-    if (value === undefined || value === null || value === '') {
-        return null;
-    }
-
-    if (typeof value === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF && XLSX.SSF.parse_date_code) {
-        const parsed = XLSX.SSF.parse_date_code(value);
-        if (parsed) {
-            const jsDate = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
-            if (!Number.isNaN(jsDate.getTime())) {
-                return { label: formatDateLabel(jsDate), sortValue: jsDate.getTime() };
-            }
-        }
-    }
-
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        return { label: formatDateLabel(value), sortValue: value.getTime() };
-    }
-
-    const str = value.toString().trim();
-    if (!str) {
-        return null;
-    }
-
-    const normalized = normalizeDateCandidate(str);
-    const datePatterns = [
-        /\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/,
-        /\d{1,2}[-\/]\w{3,4}[-\/]?\d{0,4}/,
-        /\w{3,9}\s+\d{1,2}/,
-        /\d{1,2}\s+\w{3,9}/,
-        /^\d{2}-\w{3,4}$/
-    ];
-    const monthKeywords = ['jan', 'fev', 'mar', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
-
-    const hasMonth = monthKeywords.some(keyword => normalized.includes(keyword));
-    const matchesPattern = datePatterns.some(pattern => pattern.test(normalized));
-
-    if (hasMonth || matchesPattern) {
-        return { label: cleanDateLabel(str), sortValue: null };
-    }
-
-    return null;
-}
-
-function formatDateLabel(date) {
-    try {
-        return date.toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: 'short'
-        })
-        .replace(/\./g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-$/, '')
-        .trim();
-    } catch (error) {
-        return date.toISOString().split('T')[0];
-    }
-}
-
-function cleanDateLabel(text) {
-    return text.replace(/\s+/g, ' ').trim().replace(/\s/g, '-');
-}
-
-function normalizeDateCandidate(str) {
-    return str.toString().toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\-\/\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function isDateLike(value) {
-            return Boolean(extractDateInfo(value));
-        }
-
-        
-function computePresenceColumn(columnIndex, headerRowIndex) {
-            if (!selectedSheetData) {
-                return null;
-            }
-            
-            const dateText = selectedSheetData[headerRowIndex][columnIndex];
-            
-            let nameColumnIndex = -1;
-            let firstNameColumnIndex = -1;
-            
-            for (let rowIndex = 0; rowIndex < Math.min(5, selectedSheetData.length); rowIndex++) {
-                const row = selectedSheetData[rowIndex];
-                if (row) {
-                    row.forEach((cell, colIndex) => {
-                        if (cell && typeof cell === 'string') {
-                            const cellLower = cell.toLowerCase();
-                            if (cellLower.includes('nom') && nameColumnIndex === -1) {
-                                nameColumnIndex = colIndex;
-                            }
-                            if (cellLower.includes('prenom') && firstNameColumnIndex === -1) {
-                                firstNameColumnIndex = colIndex;
-                            }
-                        }
-                    });
-                }
-            }
-            
-            const columnData = [];
-            columnData.push([dateText]);
-            
-            for (let rowIndex = headerRowIndex + 1; rowIndex < selectedSheetData.length; rowIndex++) {
-                const row = selectedSheetData[rowIndex];
-                if (!row || row.length === 0) {
-                    columnData.push(['']);
-                    continue;
-                }
-                
-                const lastName = nameColumnIndex >= 0 ? row[nameColumnIndex] : '';
-                const firstName = firstNameColumnIndex >= 0 ? row[firstNameColumnIndex] : '';
-                
-                if (!lastName && !firstName) {
-                    columnData.push(['']);
-                    continue;
-                }
-                
-                const isPresent = journalEntries.some(entry => {
-                    const entryName = normalizeString(entry.nom);
-                    const entryFirstName = normalizeString(entry.prenom);
-                    const sheetName = normalizeString(lastName);
-                    const sheetFirstName = normalizeString(firstName);
-                    
-                    return (entryName === sheetName && entryFirstName === sheetFirstName) ||
-                           (entryName === sheetName && !firstName) ||
-                           (entryFirstName === sheetFirstName && !lastName);
-                });
-                
-                columnData.push([isPresent ? 'V' : '']);
-            }
-            
-            return { columnData, dateText };
-        }
-
-        function normalizeString(str) {
-            if (!str) return '';
-            return str.toString().toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '') // Remove accents
-                .replace(/[^\w]/g, '') // Remove non-word characters
-                .trim();
-        }
-
-        function downloadUpdatedPlanning() {
-            if (!planningWorkbook) {
-                showPlanningStatus('⚠️ Aucun planning chargé', 'text-badminton-red');
-                return;
-            }
-            
-            const selectedSheet = sheetSelect.value;
-            const selectedDate = dateSelect.value;
-            
-            if (!selectedSheet || !selectedDate) {
-                showPlanningStatus('⚠️ Sélectionnez un créneau et une date', 'text-badminton-red');
-                return;
-            }
-            
-            const [columnIndex, headerRowIndex] = selectedDate.split('|').map(Number);
-            
-            showPlanningStatus('⚙️ Mise à jour du planning...', 'text-blue-600');
-            
-            try {
-                const result = computePresenceColumn(columnIndex, headerRowIndex);
-                if (!result || !result.columnData) {
-                    showPlanningStatus('❌ Impossible de générer la colonne', 'text-badminton-red');
-                    return;
-                }
-                
-                applyColumnToWorksheet(selectedSheet, columnIndex, headerRowIndex, result.columnData);
-                
-                const filename = planningFileName || 'planning_mis_a_jour.xlsx';
-                XLSX.writeFile(planningWorkbook, filename);
-                
-                showPlanningStatus('✅ Planning téléchargé: ' + filename, 'text-badminton-green');
-                
-            } catch (error) {
-                console.log('Planning update error:', error);
-                showPlanningStatus('❌ Erreur lors de la mise à jour du planning', 'text-badminton-red');
-            }
-        }
-        
-
-
-
-function applyColumnToWorksheet(sheetName, columnIndex, headerRowIndex, columnData) {
-    const worksheet = planningWorkbook.Sheets[sheetName];
-    if (!worksheet) {
-        throw new Error('Sheet not found');
-    }
-
-    const lastRowIndex = headerRowIndex + columnData.length - 1;
-    let range;
-    if (worksheet['!ref']) {
-        range = XLSX.utils.decode_range(worksheet['!ref']);
-    } else {
-        range = { s: { c: 0, r: 0 }, e: { c: columnIndex, r: lastRowIndex } };
-    }
-
-    range.e.c = Math.max(range.e.c, columnIndex);
-    range.e.r = Math.max(range.e.r, lastRowIndex);
-
-    const headerAddress = XLSX.utils.encode_cell({ c: columnIndex, r: headerRowIndex });
-    const headerCell = worksheet[headerAddress];
-    const baseStyle = headerCell && headerCell.s ? headerCell.s : undefined;
-
-    columnData.forEach((row, offset) => {
-        const value = row[0] ?? '';
-        const targetRow = headerRowIndex + offset;
-        const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: targetRow });
-        const existingCell = worksheet[cellAddress];
-        const cell = existingCell ? { ...existingCell } : {};
-        const inheritedStyle = existingCell && existingCell.s ? existingCell.s : baseStyle;
-        let appliedValue = value;
-
-        if (value === '' || value === null) {
-            cell.v = '';
-            cell.t = 's';
-            delete cell.w;
-            worksheet[cellAddress] = cell;
-        } else {
-            cell.v = value;
-            cell.t = typeof value === 'number' ? 'n' : 's';
-            if (cell.t === 'n') {
-                /* keep existing formatted display */
-            }
-            worksheet[cellAddress] = cell;
-        }
-
-        if (inheritedStyle && worksheet[cellAddress]) {
-            worksheet[cellAddress].s = inheritedStyle;
-        }
-
-        if (!selectedSheetData[targetRow]) {
-            selectedSheetData[targetRow] = [];
-        }
-        selectedSheetData[targetRow][columnIndex] = appliedValue;
-    });
-
-    worksheet['!ref'] = XLSX.utils.encode_range(range);
-}
-
-function updateDownloadPlanningState() {
-            const ready = Boolean(planningWorkbook && sheetSelect.value && dateSelect.value);
-            downloadPlanningBtn.disabled = !ready;
-            if (ready) {
-                downloadPlanningBtn.classList.remove('opacity-50');
-            } else {
-                downloadPlanningBtn.classList.add('opacity-50');
-            }
-        }
-        
-        function resetPlanningUI() {
-            planningConfig.classList.add('hidden');
-            
-            sheetSelect.innerHTML = '<option value="">- Créneau (onglet) -</option>';
-            sheetSelect.disabled = true;
-            sheetSelect.classList.add('opacity-50');
-            
-            dateSelect.innerHTML = '<option value="">- Date à mettre à jour -</option>';
-            dateSelect.disabled = true;
-            dateSelect.classList.add('opacity-50');
-            
-            downloadPlanningBtn.disabled = true;
-            downloadPlanningBtn.classList.add('opacity-50');
-            
-            selectedSheetData = null;
-            updateDownloadPlanningState();
-        }
-
-        function showPlanningStatus(message, className) {
-            planningStatus.textContent = message;
-            planningStatus.className = `text-sm font-medium ${className}`;
-            planningStatus.classList.remove('hidden');
-            
-            setTimeout(() => {
-                planningStatus.classList.add('hidden');
-            }, 5000);
         }
 
         // Start the app when DOM is loaded
