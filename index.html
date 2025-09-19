@@ -40,8 +40,8 @@
     <div class="max-w-md mx-auto p-4">
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">ð¸ Pointage Badminton</h1>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Recherchez votre nom et cochez votre prÃ©sence</p>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">🏸 Pointage Badminton</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Recherchez votre nom et cochez votre présence</p>
         </div>
 
         <!-- Tabs -->
@@ -62,7 +62,7 @@
             <!-- Search Box -->
             <div class="mb-6">
                 <label for="searchInput" class="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Tapez votre nom ou prÃ©nom (2-3 lettres min.)
+                    Tapez votre nom ou prénom (2-3 lettres min.)
                 </label>
                 <input 
                     type="text" 
@@ -86,10 +86,10 @@
                             <input type="checkbox" id="presenceCheck" class="sr-only">
                             <div class="relative">
                                 <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-lg flex items-center justify-center checkbox-unchecked">
-                                    <span class="text-gray-500 dark:text-gray-400 text-xl">â</span>
+                                    <span class="text-gray-500 dark:text-gray-400 text-xl">☐</span>
                                 </div>
                                 <div class="w-12 h-12 bg-badminton-green rounded-lg flex items-center justify-center checkbox-checked hidden">
-                                    <span class="text-white text-xl">â</span>
+                                    <span class="text-white text-xl">✓</span>
                                 </div>
                             </div>
                         </label>
@@ -100,29 +100,28 @@
             <!-- Feedback -->
             <div id="feedback" class="hidden text-center py-4">
                 <div class="inline-flex items-center px-6 py-3 bg-badminton-green text-white rounded-lg text-lg font-medium">
-                    <span class="mr-2">â
-</span>
-                    <span>PrÃ©sence enregistrÃ©e !</span>
+                    <span class="mr-2">✅</span>
+                    <span>Présence enregistrée !</span>
                 </div>
             </div>
 
             <!-- Instructions -->
             <div class="text-center text-gray-500 dark:text-gray-400 text-sm mt-8">
                 <p>1. Tapez quelques lettres de votre nom</p>
-                <p>2. Cliquez sur la case pour pointer votre prÃ©sence</p>
-                <p>3. L'Ã©cran se rÃ©initialise automatiquement</p>
+                <p>2. Cliquez sur la case pour pointer votre présence</p>
+                <p>3. L'écran se réinitialise automatiquement</p>
             </div>
             
             <!-- Footer -->
             <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec â¤ï¸</p>
+                <p>Dev par MrChaBou avec ❤️</p>
             </div>
         </div>
 
         <!-- Journal Section -->
         <div id="journalSection" class="hidden">
             <div class="mb-4 flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Journal des prÃ©sences</h2>
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Journal des présences</h2>
                 <button id="clearJournal" class="text-badminton-red hover:text-red-700 text-sm font-medium">
                     Effacer
                 </button>
@@ -133,12 +132,12 @@
             </div>
             
             <div id="emptyJournal" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>Aucune prÃ©sence enregistrÃ©e</p>
+                <p>Aucune présence enregistrée</p>
             </div>
             
             <!-- Footer -->
             <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec â¤ï¸</p>
+                <p>Dev par MrChaBou avec ❤️</p>
             </div>
         </div>
 
@@ -148,9 +147,9 @@
             
             <!-- Import Section -->
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">ð¥ Import des joueurs</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📥 Import des joueurs</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Importez un fichier Excel (.xlsx) avec les colonnes : <strong>Nom</strong>, <strong>PrÃ©nom</strong>
+                    Importez un fichier Excel (.xlsx) avec les colonnes : <strong>Nom</strong>, <strong>Prénom</strong>
                 </p>
                 
                 <div class="mb-4">
@@ -164,7 +163,7 @@
                         id="importBtn" 
                         class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors"
                     >
-                        ð SÃ©lectionner un fichier Excel
+                        📁 Sélectionner un fichier Excel
                     </button>
                 </div>
                 
@@ -181,7 +180,7 @@
 
             <!-- Planning Update Section -->
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">ð Mise Ã  jour du planning</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📋 Mise à jour du planning</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Importez le planning Excel, choisissez un créneau et une date, puis téléchargez le planning mis à jour
                 </p>
@@ -198,7 +197,7 @@
                         id="planningBtn" 
                         class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-blue-700 transition-colors"
                     >
-                        ð Choisir le planning Excel
+                        📁 Choisir le planning Excel
                     </button>
                 </div>
 
@@ -253,7 +252,7 @@
 
                         >
 
-                            ?? Télécharger le planning mis à jour
+                            📥 Télécharger le planning mis à jour
 
                         </button>
 
@@ -268,22 +267,22 @@
 
             <!-- Reset Section -->
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">ð RÃ©initialisation</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔄 Réinitialisation</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Effacez toutes les donnÃ©es pour un nouveau crÃ©neau
+                    Effacez toutes les données pour un nouveau créneau
                 </p>
                 
                 <button 
                     id="resetAllBtn" 
                     class="w-full bg-badminton-red text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-red-700 transition-colors"
                 >
-                    â ï¸ Tout rÃ©initialiser
+                    ⚠️ Tout réinitialiser
                 </button>
             </div>
             
             <!-- Footer -->
             <div class="text-center text-gray-400 dark:text-gray-500 text-xs mt-8">
-                <p>Dev par MrChaBou avec â¤ï¸</p>
+                <p>Dev par MrChaBou avec ❤️</p>
             </div>
         </div>
     </div>
@@ -524,7 +523,7 @@
                 nom: player.nom,
                 prenom: player.prenom,
                 id: player.id,
-                status: 'PrÃ©sent'
+                status: 'Présent'
             };
             
             journalEntries.unshift(entry); // Add to beginning of array
@@ -576,7 +575,7 @@
                         </div>
                         <div class="text-right">
                             <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-badminton-green text-white rounded">
-                                â ${entry.status}
+                                ✓ ${entry.status}
                             </span>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${entry.timestamp}</p>
                         </div>
@@ -586,7 +585,7 @@
         }
 
         clearJournal.addEventListener('click', () => {
-            showConfirmDialog('Ãtes-vous sÃ»r de vouloir effacer tout le journal ?', () => {
+            showConfirmDialog('Êtes-vous sûr de vouloir effacer tout le journal ?', () => {
                 journalEntries = [];
                 saveJournalToStorage(); // Save to storage
                 updateJournalDisplay();
@@ -652,13 +651,13 @@
         });
 
         resetAllBtn.addEventListener('click', () => {
-            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les présences. Êtes-vous sûr ?', () => {
+            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les prsences. tes-vous sr ?', () => {
                 resetAllData();
             });
         });
 
         function importExcelFile(file) {
-            showImportStatus('ð Lecture du fichier...', 'text-blue-600');
+            showImportStatus('📄 Lecture du fichier...', 'text-blue-600');
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -674,7 +673,7 @@
                     const jsonData = XLSX.utils.sheet_to_json(worksheet);
                     
                     if (jsonData.length === 0) {
-                        showImportStatus('â Le fichier est vide', 'text-badminton-red');
+                        showImportStatus('⚠️ Le fichier est vide', 'text-badminton-red');
                         return;
                     }
                     
@@ -688,7 +687,7 @@
                     );
                     
                     if (missingColumns.length > 0) {
-                        showImportStatus(`â Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
+                        showImportStatus(`⚠️ Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
                         return;
                     }
                     
@@ -706,7 +705,7 @@
                     }).filter(player => player.nom && player.prenom);
                     
                     if (newPlayers.length === 0) {
-                        showImportStatus('â Aucun joueur valide trouvÃ©', 'text-badminton-red');
+                        showImportStatus('⚠️ Aucun joueur valide trouvé', 'text-badminton-red');
                         return;
                     }
                     
@@ -715,8 +714,7 @@
                     players.push(...newPlayers);
                     savePlayersToStorage(); // Save to storage
                     
-                    showImportStatus(`â
- ${newPlayers.length} joueurs importÃ©s avec succÃ¨s`, 'text-badminton-green');
+                    showImportStatus(`✅ ${newPlayers.length} joueurs importés avec succès`, 'text-badminton-green');
                     updatePlayersPreview();
                     
                     // Reset form
@@ -724,7 +722,7 @@
                     
                 } catch (error) {
                     console.log('Import error:', error);
-                    showImportStatus('â Erreur lors de la lecture du fichier', 'text-badminton-red');
+                    showImportStatus('❌ Erreur lors de la lecture du fichier', 'text-badminton-red');
                 }
             };
             
@@ -760,18 +758,18 @@
 
         function exportPresencesToExcel() {
             if (journalEntries.length === 0) {
-                showExportStatus('â Aucune prÃ©sence Ã  exporter', 'text-badminton-red');
+                showExportStatus('⚠️ Aucune présence à exporter', 'text-badminton-red');
                 return;
             }
             
-            showExportStatus('ð GÃ©nÃ©ration du fichier...', 'text-blue-600');
+            showExportStatus('📊 Génération du fichier...', 'text-blue-600');
             
             try {
                 // Prepare data for export
                 const exportData = journalEntries.map(entry => ({
                     'Horodatage': entry.timestamp,
                     'Nom': entry.nom,
-                    'PrÃ©nom': entry.prenom,
+                    'Prénom': entry.prenom,
                     'Statut': entry.status
                 }));
                 
@@ -783,13 +781,13 @@
                 const colWidths = [
                     { wch: 20 }, // Horodatage
                     { wch: 15 }, // Nom
-                    { wch: 15 }, // PrÃ©nom
+                    { wch: 15 }, // Prénom
                     { wch: 10 }  // Statut
                 ];
                 ws['!cols'] = colWidths;
                 
                 // Add worksheet to workbook
-                XLSX.utils.book_append_sheet(wb, ws, "PrÃ©sences");
+                XLSX.utils.book_append_sheet(wb, ws, "Présences");
                 
                 // Generate filename with current date
                 const now = new Date();
@@ -809,10 +807,9 @@
                     
                     navigator.share({
                         files: [file],
-                        title: 'Export PrÃ©sences Badminton'
+                        title: 'Export Présences Badminton'
                     }).then(() => {
-                        showExportStatus(`â
- Fichier partagÃ©: ${filename}`, 'text-badminton-green');
+                        showExportStatus(`✅ Fichier partagé: ${filename}`, 'text-badminton-green');
                     }).catch(() => {
                         // Fallback to download
                         downloadFile(blob, filename);
@@ -824,7 +821,7 @@
                 
             } catch (error) {
                 console.log('Export error:', error);
-                showExportStatus('â Erreur lors de l\'export', 'text-badminton-red');
+                showExportStatus('❌ Erreur lors de l\'export', 'text-badminton-red');
             }
         }
 
@@ -838,8 +835,7 @@
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            showExportStatus(`â
- Fichier tÃ©lÃ©chargÃ©: ${filename}`, 'text-badminton-green');
+            showExportStatus(`✅ Fichier téléchargé: ${filename}`, 'text-badminton-green');
         }
 
         function showExportStatus(message, className) {
@@ -871,7 +867,7 @@
             updateJournalDisplay();
             
             // Show confirmation
-            showImportStatus('ð Toutes les donnÃ©es ont Ã©tÃ© effacÃ©es', 'text-blue-600');
+            showImportStatus('🔄 Toutes les données ont été effacées', 'text-blue-600');
         }
 
         // Initialize app on load
@@ -896,7 +892,7 @@
 
         // Planning functionality implementation
         function importPlanningFile(file) {
-            showPlanningStatus('?? Lecture du planning...', 'text-blue-600');
+            showPlanningStatus('📖 Lecture du planning...', 'text-blue-600');
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -904,7 +900,7 @@
                     const data = new Uint8Array(e.target.result);
                     planningWorkbook = XLSX.read(data, {type: 'array'});
                     
-                    showPlanningStatus('? Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouvé(s)', 'text-badminton-green');
+                    showPlanningStatus('? Planning chargé - ' + planningWorkbook.SheetNames.length + ' onglet(s) trouv(s)', 'text-badminton-green');
                     
                     planningConfig.classList.remove('hidden');
                     readPlanningSheets();
@@ -1055,9 +1051,9 @@
             
             return datePatterns.some(pattern => pattern.test(str)) || 
                    str.includes('sept') || str.includes('oct') || str.includes('nov') || 
-                   str.includes('dÃ©c') || str.includes('jan') || str.includes('fÃ©v') ||
+                   str.includes('déc') || str.includes('jan') || str.includes('fév') ||
                    str.includes('mar') || str.includes('avr') || str.includes('mai') ||
-                   str.includes('juin') || str.includes('juil') || str.includes('aoÃ»t');
+                   str.includes('juin') || str.includes('juil') || str.includes('août');
         }
 
         function computePresenceColumn(columnIndex, headerRowIndex) {
@@ -1147,7 +1143,7 @@
             
             const [columnIndex, headerRowIndex] = selectedDate.split('|').map(Number);
             
-            showPlanningStatus('?? Mise à jour du planning...', 'text-blue-600');
+            showPlanningStatus('⚙️ Mise à jour du planning...', 'text-blue-600');
             
             try {
                 const result = computePresenceColumn(columnIndex, headerRowIndex);
@@ -1161,7 +1157,7 @@
                 const filename = planningFileName || 'planning_mis_a_jour.xlsx';
                 XLSX.writeFile(planningWorkbook, filename);
                 
-                showPlanningStatus('? Planning téléchargé: ' + filename, 'text-badminton-green');
+                showPlanningStatus('? Planning télécharg: ' + filename, 'text-badminton-green');
                 
             } catch (error) {
                 console.log('Planning update error:', error);
