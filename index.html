@@ -2,771 +2,546 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pointage Badminton</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pointage Badminton Mobile</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#5D5CDE',
-                        badminton: {
-                            green: '#10B981',
-                            red: '#EF4444'
-                        }
-                    }
-                }
-            }
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { touch-action: manipulation; }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
-    </script>
+        .pulse-green { animation: pulse-ring 2s infinite; }
+    </style>
 </head>
-<body class="bg-white dark:bg-gray-900 min-h-screen">
-    <!-- Dark mode detection -->
-    <script>
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-            if (event.matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        });
-    </script>
-
-    <div class="max-w-md mx-auto p-4">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">🏸 Pointage Badminton</h1>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Recherchez votre nom et cochez votre présence</p>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-md mx-auto px-4 py-6">
+        <!-- Header, Tabs, etc. ... (partie HTML inchangée) -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">🏸 Badminton</h1>
+            <p class="text-sm text-gray-600 mt-1">Pointage des présences</p>
         </div>
-
-        <!-- Tabs -->
-        <div class="flex mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button id="pointageTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors bg-white dark:bg-gray-700 text-primary shadow-sm">
-                Pointage
-            </button>
-            <button id="journalTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                Journal
-            </button>
-            <button id="adminTab" class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                Admin
-            </button>
+        <div class="flex mb-6 bg-white rounded-xl shadow-sm p-1">
+            <button onclick="switchTab('pointage')" id="pointageTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg bg-purple-600 text-white">Pointer</button>
+            <button onclick="switchTab('journal')" id="journalTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Journal</button>
+            <button onclick="switchTab('admin')" id="adminTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Admin</button>
         </div>
-
-        <!-- Pointage Section -->
         <div id="pointageSection">
-            <!-- Search Box -->
-            <div class="mb-6">
-                <label for="searchInput" class="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Tapez votre nom ou prénom (2-3 lettres min.)
-                </label>
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    class="w-full text-lg p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:bg-gray-800 dark:text-white"
-                    placeholder="Ex: Dup, Marie, etc."
-                    autocomplete="off"
-                    autocapitalize="off"
-                >
-            </div>
-
-            <!-- Player Display -->
-            <div id="playerCard" class="hidden bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border-2 border-gray-200 dark:border-gray-700">
+            <div id="sessionInfo" class="hidden mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <h3 id="playerName" class="text-xl font-semibold text-gray-900 dark:text-white mb-1"></h3>
-                        <p id="playerId" class="text-gray-600 dark:text-gray-400 text-base"></p>
-                    </div>
-                    <div class="ml-4">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" id="presenceCheck" class="sr-only">
-                            <div class="relative">
-                                <div class="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-lg flex items-center justify-center checkbox-unchecked">
-                                    <span class="text-gray-500 dark:text-gray-400 text-xl">☐</span>
-                                </div>
-                                <div class="w-12 h-12 bg-badminton-green rounded-lg flex items-center justify-center checkbox-checked hidden">
-                                    <span class="text-white text-xl">✓</span>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
+                    <div>
+                        <p class="text-xs text-blue-600 font-medium">Session active</p>
+                        <p id="sessionCreneauText" class="text-lg font-bold text-gray-900 mt-1">-</p>
+                        <p id="sessionDateText" class="text-sm text-gray-600">-</p>
+                    </div><div class="text-3xl">📅</div>
                 </div>
             </div>
-
-            <!-- Feedback -->
-            <div id="feedback" class="hidden text-center py-4">
-                <div class="inline-flex items-center px-6 py-3 bg-badminton-green text-white rounded-lg text-lg font-medium">
-                    <span class="mr-2">✅</span>
-                    <span>Présence enregistrée !</span>
-                </div>
+            <div class="mb-6">
+                <label class="block text-lg font-semibold text-gray-700 mb-3">Recherchez votre nom</label>
+                <input type="text" id="searchInput" class="w-full text-xl p-5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Tapez 2-3 lettres..." autocomplete="off">
             </div>
-
-            <!-- Instructions -->
-            <div class="text-center text-gray-500 dark:text-gray-400 text-sm mt-8">
-                <p>1. Tapez quelques lettres de votre nom</p>
-                <p>2. Cliquez sur la case pour pointer votre présence</p>
-                <p>3. L'écran se réinitialise automatiquement</p>
-            </div>
-        </div>
-
-        <!-- Journal Section -->
-        <div id="journalSection" class="hidden">
-            <div class="mb-4 flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Journal des présences</h2>
-                <button id="clearJournal" class="text-badminton-red hover:text-red-700 text-sm font-medium">
-                    Effacer
-                </button>
-            </div>
-            
-            <div id="journalList" class="space-y-3">
-                <!-- Journal entries will be added here -->
-            </div>
-            
-            <div id="emptyJournal" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>Aucune présence enregistrée</p>
-            </div>
-        </div>
-
-        <!-- Admin Section -->
-        <div id="adminSection" class="hidden">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">Administration</h2>
-            
-            <!-- Import Section -->
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📥 Import des joueurs</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Importez un fichier Excel (.xlsx) avec les colonnes : <strong>Nom</strong>, <strong>Prénom</strong>
-                </p>
-                
+            <div id="playerCard" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-6 border-2 border-gray-200">
                 <div class="mb-4">
-                    <input 
-                        type="file" 
-                        id="importFile" 
-                        accept=".xlsx,.xls" 
-                        class="hidden"
-                    >
-                    <button 
-                        id="importBtn" 
-                        class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-purple-700 transition-colors"
-                    >
-                        📁 Sélectionner un fichier Excel
-                    </button>
+                    <h3 id="playerName" class="text-2xl font-bold text-gray-900">-</h3>
+                    <p id="playerId" class="text-base text-gray-500 mt-1">-</p>
                 </div>
-                
-                <div id="importStatus" class="hidden text-sm font-medium"></div>
-                
-                <!-- Players Preview -->
-                <div id="playersPreview" class="hidden mt-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Joueurs actuels (<span id="playersCount">0</span>)</h4>
-                    <div id="playersList" class="max-h-40 overflow-y-auto bg-white dark:bg-gray-900 rounded border p-3 text-sm">
-                        <!-- Players list will be displayed here -->
+                <button onclick="togglePresence()" class="w-full">
+                    <div id="presenceButtonContent" class="bg-gray-100 rounded-2xl p-8 flex flex-col items-center">
+                        <div class="text-6xl mb-2">
+                            <span id="iconUnchecked">○</span>
+                            <span id="iconChecked" class="hidden text-green-500">✓</span>
+                        </div>
+                        <span id="buttonText" class="text-lg font-semibold text-gray-600">Touchez pour pointer</span>
                     </div>
+                </button>
+                <p id="cancelMessage" class="hidden text-center text-sm text-gray-500 mt-3">Touchez à nouveau pour annuler (5s)</p>
+            </div>
+            <div id="feedback" class="hidden">
+                <div id="feedbackBox" class="text-white rounded-2xl p-6 text-center shadow-lg">
+                    <div class="text-5xl mb-3"><span id="feedbackIcon">✅</span></div>
+                    <p id="feedbackText" class="text-xl font-bold">-</p>
+                    <p id="feedbackName" class="text-base mt-2 opacity-90">-</p>
                 </div>
             </div>
-
-            <!-- Export Section -->
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">📤 Export des présences</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Exportez le journal des présences au format Excel (.xlsx)
-                </p>
-                
-                <button 
-                    id="exportBtn" 
-                    class="w-full bg-badminton-green text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-green-700 transition-colors"
-                >
-                    💾 Exporter les présences
-                </button>
-                
-                <div id="exportStatus" class="hidden mt-3 text-sm font-medium"></div>
+            <div id="noSessionMessage" class="text-center py-12 text-gray-500">
+                <div class="text-5xl mb-4">⚙️</div>
+                <p>Aucune session active.</p>
+                <p class="text-sm mt-2">Veuillez démarrer une session dans l'onglet <strong>Admin</strong>.</p>
             </div>
-
-            <!-- Reset Section -->
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">🔄 Réinitialisation</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Effacez toutes les données pour un nouveau créneau
-                </p>
-                
-                <button 
-                    id="resetAllBtn" 
-                    class="w-full bg-badminton-red text-white py-3 px-4 rounded-lg font-medium text-base hover:bg-red-700 transition-colors"
-                >
-                    ⚠️ Tout réinitialiser
-                </button>
+        </div>
+        <div id="journalSection" class="hidden">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Journal des présences</h2>
+            <div id="journalList" class="space-y-3"></div>
+            <div id="emptyJournal" class="text-center py-12 text-gray-500">
+                <div class="text-5xl mb-4">📭</div>
+                <p>Aucune présence enregistrée pour cette session</p>
+            </div>
+        </div>
+        <div id="adminSection" class="hidden">
+            <div class="bg-white rounded-xl p-6 mb-6 shadow-sm border">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">⚙️ 1. Démarrer une session</h3>
+                <div class="mb-4">
+                    <input type="file" id="planningFile" accept=".xlsx, .xls" class="hidden">
+                    <button onclick="document.getElementById('planningFile').click()" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium">📊 Charger le planning</button>
+                    <p id="planningFileName" class="text-xs text-gray-500 mt-2 text-center"></p>
+                </div>
+                <div id="planningConfig" class="hidden space-y-3">
+                    <select id="sheetSelect" onchange="loadDates()" class="w-full text-base p-3 border rounded-lg"><option value="">Sélectionnez un créneau...</option></select>
+                    <select id="dateSelect" class="w-full text-base p-3 border rounded-lg"><option value="">Sélectionnez une date...</option></select>
+                    <p class="text-xs text-blue-600">💡 La date du jour est présélectionnée si disponible.</p>
+                    <button onclick="startSession()" class="w-full bg-green-500 text-white py-3 px-4 rounded-lg font-medium">▶️ Démarrer la session</button>
+                </div>
+                <div id="sessionActiveAdmin" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                    <p class="text-sm font-medium text-green-700">✅ Session active</p>
+                    <p id="activeSessionInfo" class="text-xs text-gray-600 mt-1">-</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 mb-6 shadow-sm border">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">💾 2. Exporter les présences</h3>
+                <div class="flex items-center text-sm mb-4 p-3 rounded-lg" id="backendStatus">
+                    <span class="mr-2 text-xl" id="backendIcon">🔄</span>
+                    <span id="backendText">Vérification du serveur...</span>
+                </div>
+                <button onclick="downloadPlanning()" id="downloadBtn" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50" disabled>📥 Télécharger le planning mis à jour</button>
+                <p id="downloadMessage" class="text-xs text-center mt-2"></p>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm border">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">⚠️ Zone de danger</h3>
+                <button onclick="resetAll()" class="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-medium">Réinitialiser l'application</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // Sample data - will be loaded from storage if available
-        let players = [];
-        let journalEntries = [];
-        let resetTimeout = null;
+<script>
+// ===================================================================================
+// CONFIGURATION & ÉTAT GLOBAL
+// ===================================================================================
+const BACKEND_URL = 'https://mrchabou.eu.pythonanywhere.com';
 
-        // Storage functions
-        function savePlayersToStorage() {
-            try {
-                localStorage.setItem('badminton_players', JSON.stringify(players));
-            } catch (e) {
-                console.log('Could not save players to storage');
-            }
-        }
+let players = [], journalEntries = [], currentPlayer = null, activeSession = null;
+let planningWorkbook = null, planningFileContent = null;
+let cancelTimeout = null, isPresenceBeingProcessed = false;
+let backendAvailable = false;
 
-        function loadPlayersFromStorage() {
-            try {
-                const savedPlayers = localStorage.getItem('badminton_players');
-                if (savedPlayers) {
-                    players.length = 0;
-                    players.push(...JSON.parse(savedPlayers));
-                    return true;
-                }
-            } catch (e) {
-                console.log('Could not load players from storage');
-            }
-            return false;
-        }
+// ===================================================================================
+// INITIALISATION
+// ===================================================================================
+window.addEventListener('DOMContentLoaded', init);
 
-        function saveJournalToStorage() {
-            try {
-                localStorage.setItem('badminton_journal', JSON.stringify(journalEntries));
-            } catch (e) {
-                console.log('Could not save journal to storage');
-            }
-        }
+function init() {
+    loadDataFromStorage();
+    document.getElementById('searchInput').addEventListener('input', searchPlayer);
+    document.getElementById('planningFile').addEventListener('change', e => loadPlanning(e.target.files[0]));
+    checkBackendStatus();
+    updateUI();
+}
 
-        function loadJournalFromStorage() {
-            try {
-                const savedJournal = localStorage.getItem('badminton_journal');
-                if (savedJournal) {
-                    journalEntries.length = 0;
-                    journalEntries.push(...JSON.parse(savedJournal));
-                    return true;
-                }
-            } catch (e) {
-                console.log('Could not load journal from storage');
-            }
-            return false;
-        }
+// ===================================================================================
+// STOCKAGE LOCAL
+// ===================================================================================
+function saveDataToStorage(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error("Sauvegarde échouée", e); } }
+function loadDataFromStorage() { try { journalEntries = JSON.parse(localStorage.getItem('badminton_journal') || '[]'); activeSession = JSON.parse(localStorage.getItem('badminton_session') || 'null'); } catch(e) { journalEntries = []; activeSession = null; } }
 
-        function clearAllStorage() {
-            try {
-                localStorage.removeItem('badminton_players');
-                localStorage.removeItem('badminton_journal');
-            } catch (e) {
-                console.log('Could not clear storage');
-            }
-        }
+// ===================================================================================
+// NAVIGATION & UI
+// ===================================================================================
+function switchTab(tab) {
+    ['pointage', 'journal', 'admin'].forEach(t => {
+        document.getElementById(t + 'Section').classList.add('hidden');
+        const tabBtn = document.getElementById(t + 'Tab');
+        tabBtn.classList.remove('bg-purple-600', 'text-white');
+        tabBtn.classList.add('text-gray-600');
+    });
+    document.getElementById(tab + 'Section').classList.remove('hidden');
+    const activeTabBtn = document.getElementById(tab + 'Tab');
+    activeTabBtn.classList.add('bg-purple-600', 'text-white');
+    activeTabBtn.classList.remove('text-gray-600');
+    updateUI();
+}
+function updateUI() {
+    if (activeSession) {
+        document.getElementById('sessionInfo').classList.remove('hidden');
+        document.getElementById('sessionCreneauText').textContent = activeSession.sheet;
+        document.getElementById('sessionDateText').textContent = activeSession.dateLabel;
+        document.getElementById('noSessionMessage').classList.add('hidden');
+        document.getElementById('searchInput').parentElement.classList.remove('hidden');
+        document.getElementById('sessionActiveAdmin').classList.remove('hidden');
+        document.getElementById('activeSessionInfo').textContent = `${activeSession.sheet} - ${activeSession.dateLabel}`;
+        document.getElementById('downloadBtn').disabled = false;
+    } else {
+        document.getElementById('sessionInfo').classList.add('hidden');
+        document.getElementById('noSessionMessage').classList.remove('hidden');
+        document.getElementById('searchInput').parentElement.classList.add('hidden');
+        document.getElementById('playerCard').classList.add('hidden');
+        document.getElementById('feedback').classList.add('hidden');
+        document.getElementById('sessionActiveAdmin').classList.add('hidden');
+        document.getElementById('downloadBtn').disabled = true;
+    }
+    const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
+    const entriesForSession = sessionKey ? journalEntries.filter(e => e.session === sessionKey) : [];
+    if (entriesForSession.length === 0) {
+        document.getElementById('emptyJournal').classList.remove('hidden');
+        document.getElementById('journalList').innerHTML = '';
+    } else {
+        document.getElementById('emptyJournal').classList.add('hidden');
+        document.getElementById('journalList').innerHTML = entriesForSession.map(e => `<div class="bg-white rounded-xl p-4 shadow-sm border"><div class="flex justify-between items-center"><h4 class="font-semibold text-lg">${e.prenom} ${e.nom}</h4><span class="text-xs text-gray-400">${new Date(e.timestamp).toLocaleTimeString('fr-FR')}</span></div></div>`).join('');
+    }
+}
 
-        // Initialize with sample data if no saved data exists
-        function initializeDefaultPlayers() {
-            if (players.length === 0) {
-                const defaultPlayers = [
-                    { id: 'B001', nom: 'Dupont', prenom: 'Jean' },
-                    { id: 'B002', nom: 'Martin', prenom: 'Marie' },
-                    { id: 'B003', nom: 'Durand', prenom: 'Pierre' },
-                    { id: 'B004', nom: 'Lefebvre', prenom: 'Sophie' },
-                    { id: 'B005', nom: 'Moreau', prenom: 'Luc' },
-                    { id: 'B006', nom: 'Simon', prenom: 'Emma' },
-                    { id: 'B007', nom: 'Michel', prenom: 'Paul' },
-                    { id: 'B008', nom: 'Leroy', prenom: 'Julie' },
-                    { id: 'B009', nom: 'Roux', prenom: 'Thomas' },
-                    { id: 'B010', nom: 'David', prenom: 'Claire' },
-                    { id: 'B011', nom: 'Bertrand', prenom: 'Antoine' },
-                    { id: 'B012', nom: 'Petit', prenom: 'Camille' }
-                ];
-                players.push(...defaultPlayers);
-                savePlayersToStorage();
-            }
-        }
+// ===================================================================================
+// LOGIQUE DE POINTAGE
+// ===================================================================================
+function searchPlayer(e) {
+    const query = e.target.value.toLowerCase().trim();
+    if (query.length < 2) { resetPlayerCard(); return; }
+    const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
+    const pointedIds = journalEntries.filter(j => j.session === sessionKey).map(j => j.id);
+    
+    // CORRECTION: Cherche parmi TOUS les joueurs, même ceux déjà pointés
+    const found = players.find(p => p.nom.toLowerCase().includes(query) || p.prenom.toLowerCase().includes(query));
+    
+    if (found) { 
+        currentPlayer = found; 
+        showPlayer(found);
+        // Vérifie si déjà pointé pour mettre à jour le bouton
+        const isAlreadyPointed = pointedIds.includes(found.id);
+        updatePresenceButton(isAlreadyPointed);
+    } else { 
+        resetPlayerCard(); 
+    }
+}
 
-        // DOM elements
-        const searchInput = document.getElementById('searchInput');
-        const playerCard = document.getElementById('playerCard');
-        const playerName = document.getElementById('playerName');
-        const playerId = document.getElementById('playerId');
-        const presenceCheck = document.getElementById('presenceCheck');
-        const feedback = document.getElementById('feedback');
-        const pointageTab = document.getElementById('pointageTab');
-        const journalTab = document.getElementById('journalTab');
-        const adminTab = document.getElementById('adminTab');
-        const pointageSection = document.getElementById('pointageSection');
-        const journalSection = document.getElementById('journalSection');
-        const adminSection = document.getElementById('adminSection');
-        const journalList = document.getElementById('journalList');
-        const emptyJournal = document.getElementById('emptyJournal');
-        const clearJournal = document.getElementById('clearJournal');
+function showPlayer(player) {
+    document.getElementById('playerName').textContent = `${player.prenom} ${player.nom}`;
+    document.getElementById('playerId').textContent = `ID: ${player.id}`;
+    document.getElementById('playerCard').classList.remove('hidden');
+    document.getElementById('feedback').classList.add('hidden');
+    
+    // Vérifier si le joueur est déjà pointé
+    const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
+    const isAlreadyPointed = journalEntries.some(e => e.session === sessionKey && e.id === player.id);
+    updatePresenceButton(isAlreadyPointed);
+}
+
+function resetPlayerCard() { 
+    currentPlayer = null; 
+    document.getElementById('playerCard').classList.add('hidden');
+    clearTimeout(cancelTimeout); // Ajout important
+}
+
+function togglePresence() {
+    if (!currentPlayer || !activeSession) return;
+
+    const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
+    const alreadyPointedEntry = journalEntries.find(e => e.session === sessionKey && e.id === currentPlayer.id);
+
+    if (alreadyPointedEntry) {
+        // --- ANNULATION DU POINTAGE ---
+        journalEntries = journalEntries.filter(e => !(e.id === alreadyPointedEntry.id && e.session === sessionKey));
         
-        // Admin elements
-        const importFile = document.getElementById('importFile');
-        const importBtn = document.getElementById('importBtn');
-        const importStatus = document.getElementById('importStatus');
-        const playersPreview = document.getElementById('playersPreview');
-        const playersCount = document.getElementById('playersCount');
-        const playersList = document.getElementById('playersList');
-        const exportBtn = document.getElementById('exportBtn');
-        const exportStatus = document.getElementById('exportStatus');
-        const resetAllBtn = document.getElementById('resetAllBtn');
+        // Affiche brièvement le feedback d'annulation
+        showFeedback('Pointage annulé', 'orange', '↩️');
+        clearTimeout(cancelTimeout);
+        
+        // Revient à la carte du joueur après 1.5 secondes
+        setTimeout(() => {
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('playerCard').classList.remove('hidden');
+            updatePresenceButton(false); // Remet le bouton en état non-pointé
+        }, 1500);
 
-        let currentPlayer = null;
+    } else {
+        // --- NOUVEAU POINTAGE ---
+        const entry = { 
+            timestamp: new Date().toISOString(), 
+            nom: currentPlayer.nom, 
+            prenom: currentPlayer.prenom, 
+            id: currentPlayer.id, 
+            session: sessionKey 
+        };
+        journalEntries.unshift(entry);
+        
+        // Affiche le feedback MAIS revient à la carte après
+        showFeedback('Présence enregistrée !', 'green', '✅');
+        
+        // Revient automatiquement à la carte du joueur après 2 secondes
+        // pour permettre l'annulation
+        setTimeout(() => {
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('playerCard').classList.remove('hidden');
+            updatePresenceButton(true); // Montre que le joueur est pointé
+        }, 500);
 
-        // Tab switching
-        pointageTab.addEventListener('click', () => {
-            switchTab('pointage');
-        });
+        // Réinitialise tout après 7 secondes si pas d'action
+        cancelTimeout = setTimeout(() => {
+            resetPointingInterface();
+        }, 7000);
+    }
+    
+    saveDataToStorage('badminton_journal', journalEntries);
+    updateUI();
+}
 
-        journalTab.addEventListener('click', () => {
-            switchTab('journal');
-        });
+function updatePresenceButton(isPointed) {
+    const content = document.getElementById('presenceButtonContent');
+    const iconUnchecked = document.getElementById('iconUnchecked');
+    const iconChecked = document.getElementById('iconChecked');
+    const buttonText = document.getElementById('buttonText');
+    const cancelMsg = document.getElementById('cancelMessage');
+    if (isPointed) {
+        content.classList.remove('bg-gray-100'); content.classList.add('bg-green-500', 'pulse-green');
+        iconUnchecked.classList.add('hidden'); iconChecked.classList.remove('hidden');
+        iconChecked.classList.add('text-white'); buttonText.textContent = 'Présence confirmée';
+        buttonText.classList.add('text-white'); cancelMsg.classList.remove('hidden');
+    } else {
+        content.classList.add('bg-gray-100'); content.classList.remove('bg-green-500', 'pulse-green');
+        iconUnchecked.classList.remove('hidden'); iconChecked.classList.add('hidden');
+        buttonText.textContent = 'Touchez pour pointer'; buttonText.classList.remove('text-white');
+        cancelMsg.classList.add('hidden');
+    }
+}
+function showFeedback(message, color, icon) {
+    const feedback = document.getElementById('feedback'), feedbackBox = document.getElementById('feedbackBox');
+    document.getElementById('feedbackIcon').textContent = icon;
+    document.getElementById('feedbackText').textContent = message;
+    document.getElementById('feedbackName').textContent = `${currentPlayer.prenom} ${currentPlayer.nom}`;
+    feedbackBox.className = `text-white rounded-2xl p-6 text-center shadow-lg bg-${color}-500`;
+    feedback.classList.remove('hidden'); document.getElementById('playerCard').classList.add('hidden');
+}
+function resetPointingInterface() {
+    clearTimeout(cancelTimeout);
+    document.getElementById('searchInput').value = '';
+    document.getElementById('playerCard').classList.add('hidden');
+    document.getElementById('feedback').classList.add('hidden');
+    currentPlayer = null; isPresenceBeingProcessed = false;
+}
 
-        adminTab.addEventListener('click', () => {
-            switchTab('admin');
-        });
+// ===================================================================================
+// GESTION DU PLANNING
+// ===================================================================================
+function loadPlanning(file) {
+    if (!file) return;
+    document.getElementById('planningFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            planningFileContent = new Uint8Array(e.target.result);
+            planningWorkbook = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
+            document.getElementById('planningConfig').classList.remove('hidden');
+            loadSheets();
+        } catch(error) { alert('Erreur lecture planning'); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+function loadSheets() {
+    const select = document.getElementById('sheetSelect');
+    select.innerHTML = '<option value="">Sélectionnez un créneau...</option>';
+    planningWorkbook.SheetNames.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name; option.textContent = name;
+        select.appendChild(option);
+    });
+    document.getElementById('dateSelect').innerHTML = '<option value="">Sélectionnez une date...</option>';
+}
 
-        function switchTab(tab) {
-            // Reset all tabs
-            [pointageTab, journalTab, adminTab].forEach(t => {
-                t.classList.remove('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-                t.classList.add('text-gray-600', 'dark:text-gray-400');
-            });
+function parseCellAsDate(cellValue) {
+    if (!cellValue) return null;
+
+    let date;
+    
+    if (cellValue instanceof Date) {
+        date = cellValue;
+    } 
+    else if (typeof cellValue === 'number' && cellValue > 1) {
+        // Conversion standard Excel -> JS
+        date = new Date((cellValue - 25569) * 86400 * 1000);
+    } 
+    else if (typeof cellValue === 'string') {
+        date = new Date(cellValue);
+        if (isNaN(date.getTime())) return null;
+    } 
+    else {
+        return null;
+    }
+    
+    if (isNaN(date.getTime())) return null;
+    
+    // SOLUTION PRAGMATIQUE : Ajouter 1 jour pour corriger le décalage
+    date.setDate(date.getDate() + 1);
+    
+    return date;
+}
+
+function loadDates() {
+    const sheetName = document.getElementById('sheetSelect').value;
+    const dateSelect = document.getElementById('dateSelect');
+    dateSelect.innerHTML = '<option value="">Sélectionnez une date...</option>';
+    if (!sheetName) return;
+
+    const worksheet = planningWorkbook.Sheets[sheetName];
+    const datesFound = [];
+    
+    // Parcourir les cellules pour trouver les dates
+    for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < 20; c++) {
+            const cellAddress = XLSX.utils.encode_cell({c, r});
+            const cell = worksheet[cellAddress];
             
-            // Hide all sections
-            [pointageSection, journalSection, adminSection].forEach(s => {
-                s.classList.add('hidden');
-            });
-            
-            // Activate selected tab and section
-            if (tab === 'pointage') {
-                pointageTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-                pointageTab.classList.remove('text-gray-600', 'dark:text-gray-400');
-                pointageSection.classList.remove('hidden');
-            } else if (tab === 'journal') {
-                journalTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-                journalTab.classList.remove('text-gray-600', 'dark:text-gray-400');
-                journalSection.classList.remove('hidden');
-                updateJournalDisplay();
-            } else if (tab === 'admin') {
-                adminTab.classList.add('bg-white', 'dark:bg-gray-700', 'text-primary', 'shadow-sm');
-                adminTab.classList.remove('text-gray-600', 'dark:text-gray-400');
-                adminSection.classList.remove('hidden');
-                updatePlayersPreview();
-            }
-        }
-
-        // Search functionality
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.trim().toLowerCase();
-            
-            if (query.length < 2) {
-                hidePlayer();
-                return;
-            }
-
-            const foundPlayer = players.find(player => 
-                player.nom.toLowerCase().includes(query) || 
-                player.prenom.toLowerCase().includes(query)
-            );
-
-            if (foundPlayer) {
-                showPlayer(foundPlayer);
-            } else {
-                hidePlayer();
-            }
-        });
-
-        function showPlayer(player) {
-            currentPlayer = player;
-            playerName.textContent = `${player.prenom} ${player.nom}`;
-            playerId.textContent = `ID: ${player.id}`;
-            playerCard.classList.remove('hidden');
-            
-            // Reset checkbox state
-            presenceCheck.checked = false;
-            updateCheckboxDisplay();
-        }
-
-        function hidePlayer() {
-            currentPlayer = null;
-            playerCard.classList.add('hidden');
-        }
-
-        // Checkbox functionality
-        presenceCheck.addEventListener('change', (e) => {
-            if (e.target.checked && currentPlayer) {
-                recordPresence(currentPlayer);
-                updateCheckboxDisplay();
-                showFeedback();
-                scheduleReset();
-            }
-        });
-
-        function updateCheckboxDisplay() {
-            const unchecked = document.querySelector('.checkbox-unchecked');
-            const checked = document.querySelector('.checkbox-checked');
-            
-            if (presenceCheck.checked) {
-                unchecked.classList.add('hidden');
-                checked.classList.remove('hidden');
-                playerCard.classList.add('bg-green-50', 'dark:bg-green-900', 'border-badminton-green');
-            } else {
-                unchecked.classList.remove('hidden');
-                checked.classList.add('hidden');
-                playerCard.classList.remove('bg-green-50', 'dark:bg-green-900', 'border-badminton-green');
-            }
-        }
-
-        function recordPresence(player) {
-            const now = new Date();
-            const entry = {
-                timestamp: now.toLocaleString('fr-FR'),
-                nom: player.nom,
-                prenom: player.prenom,
-                id: player.id,
-                status: 'Présent'
-            };
-            
-            journalEntries.unshift(entry); // Add to beginning of array
-            saveJournalToStorage(); // Save to storage
-        }
-
-        function showFeedback() {
-            feedback.classList.remove('hidden');
-        }
-
-        function hideFeedback() {
-            feedback.classList.add('hidden');
-        }
-
-        function scheduleReset() {
-            if (resetTimeout) {
-                clearTimeout(resetTimeout);
-            }
-            
-            resetTimeout = setTimeout(() => {
-                resetForm();
-            }, 3000);
-        }
-
-        function resetForm() {
-            searchInput.value = '';
-            hidePlayer();
-            hideFeedback();
-            currentPlayer = null;
-            searchInput.focus();
-        }
-
-        // Journal functionality
-        function updateJournalDisplay() {
-            if (journalEntries.length === 0) {
-                emptyJournal.classList.remove('hidden');
-                journalList.innerHTML = '';
-                return;
-            }
-            
-            emptyJournal.classList.add('hidden');
-            
-            journalList.innerHTML = journalEntries.map(entry => `
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h4 class="font-semibold text-gray-900 dark:text-white">${entry.prenom} ${entry.nom}</h4>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">ID: ${entry.id}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-badminton-green text-white rounded">
-                                ✓ ${entry.status}
-                            </span>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${entry.timestamp}</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        clearJournal.addEventListener('click', () => {
-            showConfirmDialog('Êtes-vous sûr de vouloir effacer tout le journal ?', () => {
-                journalEntries = [];
-                saveJournalToStorage(); // Save to storage
-                updateJournalDisplay();
-            });
-        });
-
-        function showConfirmDialog(message, onConfirm) {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-            modal.innerHTML = `
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full">
-                    <p class="text-gray-700 dark:text-gray-300 mb-4 text-base">${message}</p>
-                    <div class="flex justify-end space-x-3">
-                        <button class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-base" onclick="this.closest('.fixed').remove()">Annuler</button>
-                        <button class="px-4 py-2 bg-badminton-red text-white hover:bg-red-600 rounded text-base" onclick="this.closest('.fixed').remove(); (${onConfirm.toString()})()">Confirmer</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
-
-        // Admin functionality
-        importBtn.addEventListener('click', () => {
-            importFile.click();
-        });
-
-        importFile.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                importExcelFile(file);
-            }
-        });
-
-        exportBtn.addEventListener('click', () => {
-            exportPresencesToExcel();
-        });
-
-        resetAllBtn.addEventListener('click', () => {
-            showConfirmDialog('⚠️ Cette action va effacer tous les joueurs et toutes les présences. Êtes-vous sûr ?', () => {
-                resetAllData();
-            });
-        });
-
-        function importExcelFile(file) {
-            showImportStatus('📊 Lecture du fichier...', 'text-blue-600');
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    // Get first worksheet
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // Convert to JSON
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (jsonData.length === 0) {
-                        showImportStatus('❌ Le fichier est vide', 'text-badminton-red');
-                        return;
-                    }
-                    
-                    // Validate columns (only nom and prenom required)
-                    const requiredColumns = ['nom', 'prenom'];
-                    const firstRow = jsonData[0];
-                    const fileColumns = Object.keys(firstRow).map(k => k.toLowerCase());
-                    
-                    const missingColumns = requiredColumns.filter(col => 
-                        !fileColumns.some(fc => fc.includes(col))
-                    );
-                    
-                    if (missingColumns.length > 0) {
-                        showImportStatus(`❌ Colonnes manquantes: ${missingColumns.join(', ')}`, 'text-badminton-red');
-                        return;
-                    }
-                    
-                    // Map data (auto-generate ID)
-                    const newPlayers = jsonData.map((row, index) => {
-                        const rowKeys = Object.keys(row);
-                        const nomKey = rowKeys.find(k => k.toLowerCase().includes('nom'));
-                        const prenomKey = rowKeys.find(k => k.toLowerCase().includes('prenom'));
-                        
-                        return {
-                            nom: row[nomKey] || '',
-                            prenom: row[prenomKey] || '',
-                            id: `B${String(index + 1).padStart(3, '0')}`
-                        };
-                    }).filter(player => player.nom && player.prenom);
-                    
-                    if (newPlayers.length === 0) {
-                        showImportStatus('❌ Aucun joueur valide trouvé', 'text-badminton-red');
-                        return;
-                    }
-                    
-                    // Replace current players
-                    players.length = 0;
-                    players.push(...newPlayers);
-                    savePlayersToStorage(); // Save to storage
-                    
-                    showImportStatus(`✅ ${newPlayers.length} joueurs importés avec succès`, 'text-badminton-green');
-                    updatePlayersPreview();
-                    
-                    // Reset form
-                    resetForm();
-                    
-                } catch (error) {
-                    console.log('Import error:', error);
-                    showImportStatus('❌ Erreur lors de la lecture du fichier', 'text-badminton-red');
-                }
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-
-        function showImportStatus(message, className) {
-            importStatus.textContent = message;
-            importStatus.className = `text-sm font-medium ${className}`;
-            importStatus.classList.remove('hidden');
-            
-            setTimeout(() => {
-                importStatus.classList.add('hidden');
-            }, 5000);
-        }
-
-        function updatePlayersPreview() {
-            playersCount.textContent = players.length;
-            
-            if (players.length === 0) {
-                playersPreview.classList.add('hidden');
-                return;
-            }
-            
-            playersPreview.classList.remove('hidden');
-            playersList.innerHTML = players.map(player => 
-                `<div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                    <span class="text-gray-900 dark:text-white">${player.prenom} ${player.nom}</span>
-                    <span class="text-gray-500 dark:text-gray-400 text-xs">${player.id}</span>
-                </div>`
-            ).join('');
-        }
-
-        function exportPresencesToExcel() {
-            if (journalEntries.length === 0) {
-                showExportStatus('❌ Aucune présence à exporter', 'text-badminton-red');
-                return;
-            }
-            
-            showExportStatus('📊 Génération du fichier...', 'text-blue-600');
-            
-            try {
-                // Prepare data for export
-                const exportData = journalEntries.map(entry => ({
-                    'Horodatage': entry.timestamp,
-                    'Nom': entry.nom,
-                    'Prénom': entry.prenom,
-                    'Statut': entry.status
-                }));
+            if (cell && cell.v != null) {
+                let date = null;
                 
-                // Create workbook
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(exportData);
-                
-                // Auto-size columns
-                const colWidths = [
-                    { wch: 20 }, // Horodatage
-                    { wch: 15 }, // Nom
-                    { wch: 15 }, // Prénom
-                    { wch: 10 }  // Statut
-                ];
-                ws['!cols'] = colWidths;
-                
-                // Add worksheet to workbook
-                XLSX.utils.book_append_sheet(wb, ws, "Présences");
-                
-                // Generate filename with current date
-                const now = new Date();
-                const dateStr = now.toISOString().split('T')[0];
-                const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-                const filename = `presences_badminton_${dateStr}_${timeStr}.xlsx`;
-                
-                // Generate blob for iOS sharing
-                const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-                const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-                
-                // Try to use Web Share API (iOS)
-                if (navigator.share) {
-                    const file = new File([blob], filename, {
-                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    });
-                    
-                    navigator.share({
-                        files: [file],
-                        title: 'Export Présences Badminton'
-                    }).then(() => {
-                        showExportStatus(`✅ Fichier partagé: ${filename}`, 'text-badminton-green');
-                    }).catch(() => {
-                        // Fallback to download
-                        downloadFile(blob, filename);
-                    });
-                } else {
-                    // Fallback to download
-                    downloadFile(blob, filename);
+                // Si c'est marqué comme une date ou si c'est un nombre qui pourrait être une date Excel
+                if (cell.t === 'd' || (cell.t === 'n' && cell.v > 40000 && cell.v < 50000)) {
+                    date = parseCellAsDate(cell.v);
                 }
                 
-            } catch (error) {
-                console.log('Export error:', error);
-                showExportStatus('❌ Erreur lors de l\'export', 'text-badminton-red');
+                if (date && !isNaN(date.getTime()) && date.getFullYear() > 2000 && date.getFullYear() < 2030) {
+                    // Formater la date correctement en français
+                    const options = { weekday: 'short', day: '2-digit', month: 'short' };
+                    const label = date.toLocaleDateString('fr-FR', options);
+                    
+                    datesFound.push({
+                        date: date,
+                        label: label,
+                        value: `${c}|${r}`
+                    });
+                }
             }
         }
-
-        function downloadFile(blob, filename) {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            showExportStatus(`✅ Fichier téléchargé: ${filename}`, 'text-badminton-green');
+    }
+    
+    // Éliminer les doublons
+    const uniqueDates = Array.from(new Map(datesFound.map(d => [d.label, d])).values());
+    
+    // Trier par date
+    uniqueDates.sort((a, b) => a.date - b.date);
+    
+    // Obtenir la date du jour sans l'heure
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Ajouter les options
+    uniqueDates.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.value;
+        option.textContent = d.label;
+        dateSelect.appendChild(option);
+        
+        // Sélectionner automatiquement la date du jour si trouvée
+        const dateOnly = new Date(d.date);
+        dateOnly.setHours(0, 0, 0, 0);
+        if (Math.abs(dateOnly.getTime() - today.getTime()) < 86400000) { // Moins de 24h de différence
+            option.selected = true;
         }
+    });
+}
 
-        function showExportStatus(message, className) {
-            exportStatus.textContent = message;
-            exportStatus.className = `mt-3 text-sm font-medium ${className}`;
-            exportStatus.classList.remove('hidden');
-            
-            setTimeout(() => {
-                exportStatus.classList.add('hidden');
-            }, 5000);
-        }
+function startSession() {
+    const sheet = document.getElementById('sheetSelect').value, dateValue = document.getElementById('dateSelect').value;
+    if (!sheet || !dateValue) { alert('Sélectionnez un créneau et une date'); return; }
 
-        function resetAllData() {
-            // Clear all data
-            players.length = 0;
-            journalEntries.length = 0;
-            
-            // Clear storage
-            clearAllStorage();
-            
-            // Reinitialize with default data
-            initializeDefaultPlayers();
-            
-            // Reset form
-            resetForm();
-            
-            // Update displays
-            updatePlayersPreview();
-            updateJournalDisplay();
-            
-            // Show confirmation
-            showImportStatus('🔄 Toutes les données ont été effacées', 'text-blue-600');
-        }
+    const worksheet = planningWorkbook.Sheets[sheet];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const extractedPlayers = [];
+    for (let r = 3; r < data.length; r++) {
+        const row = data[r], nom = row[1], prenom = row[2];
+        const stopCondition = (String(row[1] || '') + String(row[2] || '') + String(row[3] || '')).toLowerCase().includes("liste d'attente");
+        if (stopCondition) break;
+        if (nom && prenom) { extractedPlayers.push({ id: `P${String(r).padStart(3, '0')}`, nom: String(nom).trim(), prenom: String(prenom).trim() }); }
+    }
+    if (extractedPlayers.length === 0) { alert("Aucun joueur trouvé. Vérifiez le format."); return; }
+    players = extractedPlayers;
 
-        // Initialize app on load
-        function initializeApp() {
-            // Try to load saved data
-            const playersLoaded = loadPlayersFromStorage();
-            const journalLoaded = loadJournalFromStorage();
-            
-            // If no players data exists, use default sample data
-            if (!playersLoaded) {
-                initializeDefaultPlayers();
-            }
-            
-            // Update displays
-            updatePlayersPreview();
-            updateJournalDisplay();
-            
-            // Focus search input
-            searchInput.focus();
-        }
+    const [col, row] = dateValue.split('|');
+    const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
+    activeSession = { sheet: sheet, dateLabel: dateLabel, columnIndex: parseInt(col), headerRow: parseInt(row), planningFileName: document.getElementById('planningFile').files[0].name };
+    saveDataToStorage('badminton_session', activeSession);
+    updateUI();
+    alert(`Session démarrée pour ${players.length} joueurs !`);
+    switchTab('pointage');
+}
 
-        // Start the app when DOM is loaded
-        initializeApp();
-    </script>
+// ===================================================================================
+// EXPORT & BACKEND
+// ===================================================================================
+async function checkBackendStatus() {
+    const statusDiv = document.getElementById('backendStatus'), icon = document.getElementById('backendIcon'), text = document.getElementById('backendText');
+    try {
+        const response = await fetch(`${BACKEND_URL}/health`);
+        if (!response.ok) throw new Error('Status not OK');
+        const data = await response.json();
+        if (data.status === 'ok') {
+            backendAvailable = true;
+            statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-green-50 border-green-200';
+            icon.textContent = '✅'; text.textContent = 'Serveur OK. Les styles seront préservés.';
+        } else { throw new Error('Invalid response'); }
+    } catch (error) {
+        backendAvailable = false;
+        statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-yellow-50 border-yellow-200';
+        icon.textContent = '⚠️'; text.textContent = 'Serveur indisponible. Les styles ne seront PAS préservés.';
+    }
+}
+async function downloadPlanning() {
+    if (!activeSession) return;
+    const downloadBtn = document.getElementById('downloadBtn'), messageP = document.getElementById('downloadMessage');
+    downloadBtn.disabled = true; messageP.textContent = 'Préparation...';
+
+    const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
+    const presences = journalEntries.filter(e => e.session === sessionKey).map(p => ({ nom: p.nom, prenom: p.prenom }));
+    
+    if (backendAvailable) {
+        messageP.textContent = 'Envoi au serveur...';
+        try {
+            const fileReader = new FileReader();
+            fileReader.readAsDataURL(new Blob([planningFileContent]));
+            fileReader.onload = async () => {
+                const base64File = fileReader.result.split(',')[1];
+                const response = await fetch(`${BACKEND_URL}/update-planning`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: base64File, sheet: activeSession.sheet, columnIndex: activeSession.columnIndex, presences: presences, filename: `maj_${activeSession.planningFileName}` })
+                });
+                if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+                const byteCharacters = atob(data.file);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                triggerDownload(blob, data.filename);
+                messageP.textContent = 'Téléchargement terminé !';
+            };
+        } catch (error) { alert('Erreur serveur. Tentative locale...'); console.error(error); downloadLocally(presences); }
+    } else { downloadLocally(presences); }
+    setTimeout(() => { downloadBtn.disabled = false; messageP.textContent = ''; }, 3000);
+}
+function downloadLocally(presences) {
+    alert("Traitement local, les styles seront perdus.");
+    const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[activeSession.sheet];
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    for (let r = 3; r < data.length; r++) {
+        const nom = data[r][1], prenom = data[r][2];
+        if (!nom || !prenom) continue;
+        const isPresent = presences.some(p => p.nom === nom && p.prenom === prenom);
+        const cellAddress = XLSX.utils.encode_cell({c: activeSession.columnIndex, r: r});
+        if (isPresent) { XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress }); } 
+        else { XLSX.utils.sheet_add_aoa(ws, [[null]], { origin: cellAddress }); }
+    }
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {type: 'application/octet-stream'});
+    triggerDownload(blob, `local_maj_${activeSession.planningFileName}`);
+}
+function triggerDownload(blob, filename) {
+    const url = window.URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    window.URL.revokeObjectURL(url); a.remove();
+}
+function resetAll() { if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) { localStorage.removeItem('badminton_journal'); localStorage.removeItem('badminton_session'); location.reload(); } }
+</script>
 </body>
 </html>
