@@ -25,6 +25,7 @@
         </div>
         <div class="flex mb-6 bg-white rounded-xl shadow-sm p-1">
             <button onclick="switchTab('pointage')" id="pointageTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg bg-purple-600 text-white">Pointer</button>
+            <button onclick="switchTab('participants')" id="participantsTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Participants</button>            
             <button onclick="switchTab('journal')" id="journalTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Journal</button>
             <button onclick="switchTab('admin')" id="adminTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Admin</button>
         </div>
@@ -69,6 +70,19 @@
                 <div class="text-5xl mb-4">⚙️</div>
                 <p>Aucune session active.</p>
                 <p class="text-sm mt-2">Veuillez démarrer une session dans l'onglet <strong>Admin</strong>.</p>
+            </div>
+        </div>
+        <!-- NOUVEAU : Section Participants -->
+        <div id="participantsSection" class="hidden">
+            <div id="participantsInfo" class="hidden mb-4 flex justify-between items-center">
+                 <h2 class="text-xl font-bold text-gray-900">Liste des Participants</h2>
+                 <span id="participantsCount" class="text-sm font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">0</span>
+            </div>
+            <div id="participantsList" class="space-y-2"></div>
+            <div id="noSessionParticipants" class="text-center py-12 text-gray-500">
+                <div class="text-5xl mb-4">👥</div>
+                <p>Aucune session active.</p>
+                <p class="text-sm mt-2">Démarrez une session dans l'onglet <strong>Admin</strong> pour voir la liste.</p>
             </div>
         </div>
         <div id="journalSection" class="hidden">
@@ -120,7 +134,7 @@
 // ===================================================================================
 const BACKEND_URL = 'https://mrchabou.eu.pythonanywhere.com';
 
-let players = [], journalEntries = [], currentPlayer = null, activeSession = null;
+let players = [], allParticipants = [], journalEntries = [], currentPlayer = null, activeSession = null;
 let planningWorkbook = null, planningFileContent = null;
 let cancelTimeout = null, isPresenceBeingProcessed = false;
 let backendAvailable = false;
@@ -142,13 +156,22 @@ function init() {
 // STOCKAGE LOCAL
 // ===================================================================================
 function saveDataToStorage(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error("Sauvegarde échouée", e); } }
-function loadDataFromStorage() { try { journalEntries = JSON.parse(localStorage.getItem('badminton_journal') || '[]'); activeSession = JSON.parse(localStorage.getItem('badminton_session') || 'null'); } catch(e) { journalEntries = []; activeSession = null; } }
+function loadDataFromStorage() { 
+    try { 
+        journalEntries = JSON.parse(localStorage.getItem('badminton_journal') || '[]'); 
+        activeSession = JSON.parse(localStorage.getItem('badminton_session') || 'null'); 
+        // MODIFIÉ : On charge aussi la liste complète des participants
+        allParticipants = JSON.parse(localStorage.getItem('badminton_all_participants') || '[]');
+    } catch(e) { 
+        journalEntries = []; activeSession = null; allParticipants = [];
+    } 
+}
 
 // ===================================================================================
 // NAVIGATION & UI
 // ===================================================================================
 function switchTab(tab) {
-    ['pointage', 'journal', 'admin'].forEach(t => {
+    ['pointage', 'participants', 'journal', 'admin'].forEach(t => {
         document.getElementById(t + 'Section').classList.add('hidden');
         const tabBtn = document.getElementById(t + 'Tab');
         tabBtn.classList.remove('bg-purple-600', 'text-white');
@@ -158,8 +181,50 @@ function switchTab(tab) {
     const activeTabBtn = document.getElementById(tab + 'Tab');
     activeTabBtn.classList.add('bg-purple-600', 'text-white');
     activeTabBtn.classList.remove('text-gray-600');
+    
+    // NOUVEAU : On met à jour l'affichage de la liste des participants si on va sur cet onglet
+    if (tab === 'participants') {
+        updateParticipantsUI();
+    }
     updateUI();
 }
+
+function updateParticipantsUI() {
+    const listDiv = document.getElementById('participantsList');
+    const infoDiv = document.getElementById('participantsInfo');
+    const countSpan = document.getElementById('participantsCount');
+    const noSessionDiv = document.getElementById('noSessionParticipants');
+
+    if (!activeSession || allParticipants.length === 0) {
+        listDiv.innerHTML = '';
+        infoDiv.classList.add('hidden');
+        noSessionDiv.classList.remove('hidden');
+        return;
+    }
+
+    noSessionDiv.classList.add('hidden');
+    infoDiv.classList.remove('hidden');
+    countSpan.textContent = allParticipants.length;
+
+    listDiv.innerHTML = allParticipants.map(p => {
+        const isInscrit = p.statut === 'Inscrit';
+        const bgColor = isInscrit ? 'bg-white' : 'bg-yellow-50';
+        const statusColor = isInscrit ? 'text-green-600 bg-green-100' : 'text-orange-600 bg-orange-100';
+        const statusText = isInscrit ? 'Inscrit' : 'Attente';
+
+        return `
+            <div class="${bgColor} rounded-xl p-4 shadow-sm border flex justify-between items-center">
+                <div>
+                    <h4 class="font-semibold text-base">${p.prenom} ${p.nom}</h4>
+                </div>
+                <div>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full ${statusColor}">${statusText}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 function updateUI() {
     if (activeSession) {
         document.getElementById('sessionInfo').classList.remove('hidden');
@@ -302,6 +367,7 @@ function updatePresenceButton(isPointed) {
         cancelMsg.classList.add('hidden');
     }
 }
+
 function showFeedback(message, color, icon) {
     const feedback = document.getElementById('feedback'), feedbackBox = document.getElementById('feedbackBox');
     document.getElementById('feedbackIcon').textContent = icon;
@@ -310,6 +376,7 @@ function showFeedback(message, color, icon) {
     feedbackBox.className = `text-white rounded-2xl p-6 text-center shadow-lg bg-${color}-500`;
     feedback.classList.remove('hidden'); document.getElementById('playerCard').classList.add('hidden');
 }
+
 function resetPointingInterface() {
     clearTimeout(cancelTimeout);
     document.getElementById('searchInput').value = '';
@@ -335,6 +402,7 @@ function loadPlanning(file) {
     };
     reader.readAsArrayBuffer(file);
 }
+
 function loadSheets() {
     const select = document.getElementById('sheetSelect');
     select.innerHTML = '<option value="">Sélectionnez un créneau...</option>';
@@ -439,28 +507,70 @@ function loadDates() {
 }
 
 function startSession() {
-    const sheet = document.getElementById('sheetSelect').value, dateValue = document.getElementById('dateSelect').value;
-    if (!sheet || !dateValue) { alert('Sélectionnez un créneau et une date'); return; }
+    const sheet = document.getElementById('sheetSelect').value;
+    const dateValue = document.getElementById('dateSelect').value;
+    if (!sheet || !dateValue) {
+        alert('Sélectionnez un créneau et une date');
+        return;
+    }
 
     const worksheet = planningWorkbook.Sheets[sheet];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    const extractedPlayers = [];
-    for (let r = 3; r < data.length; r++) {
-        const row = data[r], nom = row[1], prenom = row[2];
-        const stopCondition = (String(row[1] || '') + String(row[2] || '') + String(row[3] || '')).toLowerCase().includes("liste d'attente");
-        if (stopCondition) break;
-        if (nom && prenom) { extractedPlayers.push({ id: `P${String(r).padStart(3, '0')}`, nom: String(nom).trim(), prenom: String(prenom).trim() }); }
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    const maxRow = range.e.r;
+
+    const extractedAllParticipants = [];
+    let isWaitlist = false;
+
+    for (let r = 3; r <= maxRow; r++) {
+        const cellB = worksheet[XLSX.utils.encode_cell({c: 1, r: r})];
+        const cellC = worksheet[XLSX.utils.encode_cell({c: 2, r: r})];
+        const cellD = worksheet[XLSX.utils.encode_cell({c: 3, r: r})];
+
+        // On récupère la valeur brute des cellules
+        const nomValue = cellB ? cellB.v : undefined;
+        const prenomValue = cellC ? cellC.v : undefined;
+
+        const checkText = (nomValue || '') + (prenomValue || '') + (cellD ? cellD.v : '');
+
+        if (String(checkText).toLowerCase().includes("liste d'attente")) {
+            isWaitlist = true;
+            continue;
+        }
+        
+        // LA CORRECTION CLÉ EST ICI :
+        // On vérifie seulement si la colonne NOM (B) contient quelque chose.
+        if (nomValue) { 
+            const nom = String(nomValue).trim();
+            // Si le prénom est manquant, on met une chaîne vide ou un placeholder
+            const prenom = prenomValue ? String(prenomValue).trim() : ''; 
+            
+            const statut = isWaitlist ? "Liste d'attente" : "Inscrit";
+            extractedAllParticipants.push({
+                id: `P${String(r).padStart(3, '0')}`,
+                nom: nom,
+                prenom: prenom,
+                statut: statut
+            });
+        }
     }
-    if (extractedPlayers.length === 0) { alert("Aucun joueur trouvé. Vérifiez le format."); return; }
-    players = extractedPlayers;
+
+    if (extractedAllParticipants.length === 0) {
+        alert("Aucun joueur trouvé. Vérifiez le format du fichier.");
+        return;
+    }
+    
+    // Le reste est inchangé
+    allParticipants = extractedAllParticipants;
+    players = allParticipants.filter(p => p.statut === 'Inscrit');
+    saveDataToStorage('badminton_all_participants', allParticipants);
 
     const [col, row] = dateValue.split('|');
     const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
     activeSession = { sheet: sheet, dateLabel: dateLabel, columnIndex: parseInt(col), headerRow: parseInt(row), planningFileName: document.getElementById('planningFile').files[0].name };
     saveDataToStorage('badminton_session', activeSession);
     updateUI();
-    alert(`Session démarrée pour ${players.length} joueurs !`);
-    switchTab('pointage');
+    alert(`Session démarrée. ${players.length} inscrits et ${allParticipants.length - players.length} en attente trouvés.`);
+    switchTab('participants');
 }
 
 // ===================================================================================
@@ -483,6 +593,7 @@ async function checkBackendStatus() {
         icon.textContent = '⚠️'; text.textContent = 'Serveur indisponible. Les styles ne seront PAS préservés.';
     }
 }
+
 async function downloadPlanning() {
     if (!activeSession) return;
     const downloadBtn = document.getElementById('downloadBtn'), messageP = document.getElementById('downloadMessage');
@@ -518,6 +629,7 @@ async function downloadPlanning() {
     } else { downloadLocally(presences); }
     setTimeout(() => { downloadBtn.disabled = false; messageP.textContent = ''; }, 3000);
 }
+
 function downloadLocally(presences) {
     alert("Traitement local, les styles seront perdus.");
     const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
@@ -535,12 +647,14 @@ function downloadLocally(presences) {
     const blob = new Blob([wbout], {type: 'application/octet-stream'});
     triggerDownload(blob, `local_maj_${activeSession.planningFileName}`);
 }
+
 function triggerDownload(blob, filename) {
     const url = window.URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = filename;
     document.body.appendChild(a); a.click();
     window.URL.revokeObjectURL(url); a.remove();
 }
+
 function resetAll() { if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) { localStorage.removeItem('badminton_journal'); localStorage.removeItem('badminton_session'); location.reload(); } }
 </script>
 </body>
