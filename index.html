@@ -8,41 +8,64 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { touch-action: manipulation; }
+        /* Animation pulsante verte pour les participants pointés */
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         .pulse-green { animation: pulse-ring 2s infinite; }
+        
+        /* Animation pour le feedback de pointage */
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .feedback-slide { animation: slideIn 0.3s ease-out; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="max-w-md mx-auto px-4 py-6">
-        <!-- Header, Tabs, etc. ... (partie HTML inchangée) -->
+        <!-- Header -->
         <div class="text-center mb-6">
             <h1 class="text-3xl font-bold text-gray-900">🏸 Badminton</h1>
             <p class="text-sm text-gray-600 mt-1">Pointage des présences</p>
         </div>
+
+        <!-- Tabs Navigation -->
         <div class="flex mb-6 bg-white rounded-xl shadow-sm p-1">
             <button onclick="switchTab('pointage')" id="pointageTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg bg-purple-600 text-white">Pointer</button>
             <button onclick="switchTab('participants')" id="participantsTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Participants</button>            
             <button onclick="switchTab('journal')" id="journalTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Journal</button>
             <button onclick="switchTab('admin')" id="adminTab" class="flex-1 py-3 px-3 text-sm font-semibold rounded-lg text-gray-600">Admin</button>
         </div>
+
+        <!-- ONGLET POINTAGE -->
         <div id="pointageSection">
+            <!-- Info session active -->
             <div id="sessionInfo" class="hidden mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs text-blue-600 font-medium">Session active</p>
                         <p id="sessionCreneauText" class="text-lg font-bold text-gray-900 mt-1">-</p>
                         <p id="sessionDateText" class="text-sm text-gray-600">-</p>
-                    </div><div class="text-3xl">📅</div>
+                    </div>
+                    <div class="text-3xl">📅</div>
                 </div>
             </div>
+
+            <!-- Barre de recherche améliorée -->
             <div class="mb-6">
                 <label class="block text-lg font-semibold text-gray-700 mb-3">Recherchez votre nom</label>
                 <input type="text" id="searchInput" class="w-full text-xl p-5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Tapez 2-3 lettres..." autocomplete="off">
+                
+                <!-- Liste dynamique des résultats de recherche -->
+                <div id="searchResults" class="hidden mt-3 bg-white rounded-xl shadow-lg border-2 border-purple-200 max-h-96 overflow-y-auto">
+                    <div id="searchResultsList" class="divide-y divide-gray-100"></div>
+                </div>
             </div>
+
+            <!-- Carte du joueur sélectionné (ancienne version conservée pour compatibilité) -->
             <div id="playerCard" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-6 border-2 border-gray-200">
                 <div class="mb-4">
                     <h3 id="playerName" class="text-2xl font-bold text-gray-900">-</h3>
@@ -59,24 +82,42 @@
                 </button>
                 <p id="cancelMessage" class="hidden text-center text-sm text-gray-500 mt-3">Touchez à nouveau pour annuler (5s)</p>
             </div>
+
+            <!-- Feedback de pointage -->
             <div id="feedback" class="hidden">
-                <div id="feedbackBox" class="text-white rounded-2xl p-6 text-center shadow-lg">
+                <div id="feedbackBox" class="text-white rounded-2xl p-6 text-center shadow-lg feedback-slide">
                     <div class="text-5xl mb-3"><span id="feedbackIcon">✅</span></div>
                     <p id="feedbackText" class="text-xl font-bold">-</p>
                     <p id="feedbackName" class="text-base mt-2 opacity-90">-</p>
                 </div>
             </div>
+
+            <!-- Message si aucune session -->
             <div id="noSessionMessage" class="text-center py-12 text-gray-500">
                 <div class="text-5xl mb-4">⚙️</div>
                 <p>Aucune session active.</p>
                 <p class="text-sm mt-2">Veuillez démarrer une session dans l'onglet <strong>Admin</strong>.</p>
             </div>
         </div>
-        <!-- NOUVEAU : Section Participants -->
+
+        <!-- ONGLET PARTICIPANTS -->
         <div id="participantsSection" class="hidden">
+            <!-- Feedback de pointage dans l'onglet participants -->
+            <div id="participantFeedback" class="hidden mb-4">
+                <div id="participantFeedbackBox" class="text-white rounded-xl p-4 text-center shadow-lg feedback-slide">
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="participantFeedbackIcon" class="text-2xl">✅</span>
+                        <span id="participantFeedbackText" class="font-semibold">Présence enregistrée !</span>
+                    </div>
+                </div>
+            </div>
+
             <div id="participantsInfo" class="hidden mb-4 flex justify-between items-center">
-                 <h2 class="text-xl font-bold text-gray-900">Liste des Participants</h2>
-                 <span id="participantsCount" class="text-sm font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">0</span>
+                <h2 class="text-xl font-bold text-gray-900">Liste des Participants</h2>
+                <div class="flex gap-2">
+                    <span id="participantsPresent" class="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">0 présents</span>
+                    <span id="participantsCount" class="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">0 total</span>
+                </div>
             </div>
             <div id="participantsList" class="space-y-2"></div>
             <div id="noSessionParticipants" class="text-center py-12 text-gray-500">
@@ -85,14 +126,18 @@
                 <p class="text-sm mt-2">Démarrez une session dans l'onglet <strong>Admin</strong> pour voir la liste.</p>
             </div>
         </div>
+
+        <!-- ONGLET JOURNAL -->
         <div id="journalSection" class="hidden">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Journal des présences</h2>
             <div id="journalList" class="space-y-3"></div>
             <div id="emptyJournal" class="text-center py-12 text-gray-500">
-                <div class="text-5xl mb-4">📭</div>
+                <div class="text-5xl mb-4">🔭</div>
                 <p>Aucune présence enregistrée pour cette session</p>
             </div>
         </div>
+
+        <!-- ONGLET ADMIN -->
         <div id="adminSection" class="hidden">
             <div class="bg-white rounded-xl p-6 mb-6 shadow-sm border">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">⚙️ 1. Démarrer une session</h3>
@@ -146,7 +191,7 @@ window.addEventListener('DOMContentLoaded', init);
 
 function init() {
     loadDataFromStorage();
-    document.getElementById('searchInput').addEventListener('input', searchPlayer);
+    document.getElementById('searchInput').addEventListener('input', searchPlayerDynamic);
     document.getElementById('planningFile').addEventListener('change', e => loadPlanning(e.target.files[0]));
     checkBackendStatus();
     updateUI();
@@ -155,15 +200,23 @@ function init() {
 // ===================================================================================
 // STOCKAGE LOCAL
 // ===================================================================================
-function saveDataToStorage(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error("Sauvegarde échouée", e); } }
+function saveDataToStorage(key, data) { 
+    try { 
+        localStorage.setItem(key, JSON.stringify(data)); 
+    } catch(e) { 
+        console.error("Sauvegarde échouée", e); 
+    } 
+}
+
 function loadDataFromStorage() { 
     try { 
         journalEntries = JSON.parse(localStorage.getItem('badminton_journal') || '[]'); 
         activeSession = JSON.parse(localStorage.getItem('badminton_session') || 'null'); 
-        // MODIFIÉ : On charge aussi la liste complète des participants
         allParticipants = JSON.parse(localStorage.getItem('badminton_all_participants') || '[]');
     } catch(e) { 
-        journalEntries = []; activeSession = null; allParticipants = [];
+        journalEntries = []; 
+        activeSession = null; 
+        allParticipants = [];
     } 
 }
 
@@ -171,30 +224,40 @@ function loadDataFromStorage() {
 // NAVIGATION & UI
 // ===================================================================================
 function switchTab(tab) {
+    // Masquer toutes les sections et réinitialiser les styles des boutons
     ['pointage', 'participants', 'journal', 'admin'].forEach(t => {
         document.getElementById(t + 'Section').classList.add('hidden');
         const tabBtn = document.getElementById(t + 'Tab');
         tabBtn.classList.remove('bg-purple-600', 'text-white');
         tabBtn.classList.add('text-gray-600');
     });
+    
+    // Afficher la section active et mettre à jour le style du bouton
     document.getElementById(tab + 'Section').classList.remove('hidden');
     const activeTabBtn = document.getElementById(tab + 'Tab');
     activeTabBtn.classList.add('bg-purple-600', 'text-white');
     activeTabBtn.classList.remove('text-gray-600');
     
-    // NOUVEAU : On met à jour l'affichage de la liste des participants si on va sur cet onglet
+    // Mettre à jour l'affichage selon l'onglet
     if (tab === 'participants') {
         updateParticipantsUI();
     }
     updateUI();
 }
 
+/**
+ * Met à jour l'affichage de l'onglet Participants
+ * Affiche tous les participants avec leur statut de pointage
+ * Permet le pointage/dépointage direct en cliquant sur un participant
+ */
 function updateParticipantsUI() {
     const listDiv = document.getElementById('participantsList');
     const infoDiv = document.getElementById('participantsInfo');
     const countSpan = document.getElementById('participantsCount');
+    const presentSpan = document.getElementById('participantsPresent');
     const noSessionDiv = document.getElementById('noSessionParticipants');
 
+    // Si pas de session active, afficher le message
     if (!activeSession || allParticipants.length === 0) {
         listDiv.innerHTML = '';
         infoDiv.classList.add('hidden');
@@ -204,18 +267,48 @@ function updateParticipantsUI() {
 
     noSessionDiv.classList.add('hidden');
     infoDiv.classList.remove('hidden');
-    countSpan.textContent = allParticipants.length;
+    
+    // Récupérer la liste des IDs pointés pour cette session
+    const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
+    const pointedIds = journalEntries
+        .filter(e => e.session === sessionKey)
+        .map(e => e.id);
+    
+    // Compter les présents
+    const presentCount = pointedIds.length;
+    countSpan.textContent = `${allParticipants.length} total`;
+    presentSpan.textContent = `${presentCount} présents`;
 
+    // Générer l'affichage de chaque participant
     listDiv.innerHTML = allParticipants.map(p => {
         const isInscrit = p.statut === 'Inscrit';
-        const bgColor = isInscrit ? 'bg-white' : 'bg-yellow-50';
-        const statusColor = isInscrit ? 'text-green-600 bg-green-100' : 'text-orange-600 bg-orange-100';
-        const statusText = isInscrit ? 'Inscrit' : 'Attente';
+        const isPointed = pointedIds.includes(p.id);
+        
+        // Définir les styles selon le statut
+        let bgColor = isInscrit ? 'bg-white' : 'bg-yellow-50';
+        let borderColor = 'border-gray-200';
+        let statusColor = isInscrit ? 'text-green-600 bg-green-100' : 'text-orange-600 bg-orange-100';
+        let statusText = isInscrit ? 'Inscrit' : 'Attente';
+        let pulseClass = '';
+        let checkIcon = '';
+        
+        // Si le participant est pointé, appliquer les styles de présence
+        if (isPointed) {
+            bgColor = 'bg-green-50';
+            borderColor = 'border-green-400';
+            pulseClass = 'pulse-green';
+            checkIcon = '<span class="text-2xl text-green-500">✓</span>';
+        }
 
         return `
-            <div class="${bgColor} rounded-xl p-4 shadow-sm border flex justify-between items-center">
-                <div>
-                    <h4 class="font-semibold text-base">${p.prenom} ${p.nom}</h4>
+            <div onclick="toggleParticipantPresence('${p.id}')" 
+                 class="${bgColor} ${pulseClass} rounded-xl p-4 shadow-sm border-2 ${borderColor} flex justify-between items-center cursor-pointer transition-all hover:shadow-md active:scale-95">
+                <div class="flex items-center gap-3">
+                    ${checkIcon}
+                    <div>
+                        <h4 class="font-semibold text-base">${p.prenom} ${p.nom}</h4>
+                        ${isPointed ? '<p class="text-xs text-green-600 font-medium mt-1">Présent</p>' : ''}
+                    </div>
                 </div>
                 <div>
                     <span class="text-xs font-bold px-2 py-1 rounded-full ${statusColor}">${statusText}</span>
@@ -225,7 +318,69 @@ function updateParticipantsUI() {
     }).join('');
 }
 
+/**
+ * Gère le pointage/dépointage d'un participant depuis l'onglet Participants
+ * @param {string} playerId - L'ID du participant à pointer/dépointer
+ */
+function toggleParticipantPresence(playerId) {
+    if (!activeSession) return;
+    
+    // Trouver le participant dans la liste
+    const participant = allParticipants.find(p => p.id === playerId);
+    if (!participant) return;
+    
+    const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
+    const existingEntry = journalEntries.find(e => e.session === sessionKey && e.id === playerId);
+    
+    if (existingEntry) {
+        // DÉPOINTAGE : Retirer l'entrée du journal
+        journalEntries = journalEntries.filter(e => !(e.id === playerId && e.session === sessionKey));
+        showParticipantFeedback('Présence annulée', 'orange', '↩️');
+    } else {
+        // POINTAGE : Ajouter une nouvelle entrée
+        const entry = {
+            timestamp: new Date().toISOString(),
+            nom: participant.nom,
+            prenom: participant.prenom,
+            id: participant.id,
+            session: sessionKey
+        };
+        journalEntries.unshift(entry);
+        showParticipantFeedback('Présence enregistrée !', 'green', '✅');
+    }
+    
+    // Sauvegarder et mettre à jour l'affichage
+    saveDataToStorage('badminton_journal', journalEntries);
+    updateParticipantsUI();
+    updateUI();
+}
+
+/**
+ * Affiche un feedback visuel dans l'onglet Participants
+ * @param {string} message - Le message à afficher
+ * @param {string} color - La couleur du feedback (green, orange, etc.)
+ * @param {string} icon - L'icône à afficher
+ */
+function showParticipantFeedback(message, color, icon) {
+    const feedback = document.getElementById('participantFeedback');
+    const feedbackBox = document.getElementById('participantFeedbackBox');
+    const feedbackIcon = document.getElementById('participantFeedbackIcon');
+    const feedbackText = document.getElementById('participantFeedbackText');
+    
+    feedbackIcon.textContent = icon;
+    feedbackText.textContent = message;
+    feedbackBox.className = `text-white rounded-xl p-4 text-center shadow-lg feedback-slide bg-${color}-500`;
+    
+    feedback.classList.remove('hidden');
+    
+    // Masquer le feedback après 2 secondes
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 2000);
+}
+
 function updateUI() {
+    // Mise à jour de l'affichage de la session active
     if (activeSession) {
         document.getElementById('sessionInfo').classList.remove('hidden');
         document.getElementById('sessionCreneauText').textContent = activeSession.sheet;
@@ -244,38 +399,105 @@ function updateUI() {
         document.getElementById('sessionActiveAdmin').classList.add('hidden');
         document.getElementById('downloadBtn').disabled = true;
     }
+    
+    // Mise à jour du journal
     const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
     const entriesForSession = sessionKey ? journalEntries.filter(e => e.session === sessionKey) : [];
+    
     if (entriesForSession.length === 0) {
         document.getElementById('emptyJournal').classList.remove('hidden');
         document.getElementById('journalList').innerHTML = '';
     } else {
         document.getElementById('emptyJournal').classList.add('hidden');
-        document.getElementById('journalList').innerHTML = entriesForSession.map(e => `<div class="bg-white rounded-xl p-4 shadow-sm border"><div class="flex justify-between items-center"><h4 class="font-semibold text-lg">${e.prenom} ${e.nom}</h4><span class="text-xs text-gray-400">${new Date(e.timestamp).toLocaleTimeString('fr-FR')}</span></div></div>`).join('');
+        document.getElementById('journalList').innerHTML = entriesForSession.map(e => `
+            <div class="bg-white rounded-xl p-4 shadow-sm border">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-semibold text-lg">${e.prenom} ${e.nom}</h4>
+                    <span class="text-xs text-gray-400">${new Date(e.timestamp).toLocaleTimeString('fr-FR')}</span>
+                </div>
+            </div>
+        `).join('');
     }
 }
 
 // ===================================================================================
-// LOGIQUE DE POINTAGE
+// LOGIQUE DE RECHERCHE AMÉLIORÉE
 // ===================================================================================
-function searchPlayer(e) {
+
+/**
+ * Recherche dynamique avec affichage de la liste des résultats
+ * Affiche une liste de participants correspondants dès 3 lettres tapées
+ * La liste permet de sélectionner directement un participant
+ */
+function searchPlayerDynamic(e) {
     const query = e.target.value.toLowerCase().trim();
-    if (query.length < 2) { resetPlayerCard(); return; }
+    const searchResults = document.getElementById('searchResults');
+    const searchResultsList = document.getElementById('searchResultsList');
+    
+    // Si moins de 2 caractères, masquer les résultats et réinitialiser
+    if (query.length < 2) {
+        searchResults.classList.add('hidden');
+        resetPlayerCard();
+        return;
+    }
+    
+    // Filtrer les joueurs correspondant à la recherche
     const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
     const pointedIds = journalEntries.filter(j => j.session === sessionKey).map(j => j.id);
     
-    // CORRECTION: Cherche parmi TOUS les joueurs, même ceux déjà pointés
-    const found = players.find(p => p.nom.toLowerCase().includes(query) || p.prenom.toLowerCase().includes(query));
+    const matchingPlayers = players.filter(p => 
+        p.nom.toLowerCase().includes(query) || 
+        p.prenom.toLowerCase().includes(query)
+    );
     
-    if (found) { 
-        currentPlayer = found; 
-        showPlayer(found);
-        // Vérifie si déjà pointé pour mettre à jour le bouton
-        const isAlreadyPointed = pointedIds.includes(found.id);
-        updatePresenceButton(isAlreadyPointed);
-    } else { 
-        resetPlayerCard(); 
+    // Afficher la liste seulement s'il y a des résultats
+    if (matchingPlayers.length === 0) {
+        searchResults.classList.add('hidden');
+        resetPlayerCard();
+        return;
     }
+    
+    // Si un seul résultat exact, le sélectionner directement
+    if (matchingPlayers.length === 1) {
+        currentPlayer = matchingPlayers[0];
+        showPlayer(matchingPlayers[0]);
+        searchResults.classList.add('hidden');
+        return;
+    }
+    
+    // Afficher la liste des résultats
+    searchResults.classList.remove('hidden');
+    searchResultsList.innerHTML = matchingPlayers.map(p => {
+        const isPointed = pointedIds.includes(p.id);
+        const bgColor = isPointed ? 'bg-green-50' : 'bg-white';
+        const checkIcon = isPointed ? '<span class="text-green-500 text-xl">✓</span>' : '<span class="text-gray-300 text-xl">○</span>';
+        
+        return `
+            <div onclick="selectPlayerFromSearch('${p.id}')" 
+                 class="${bgColor} p-4 cursor-pointer hover:bg-purple-50 active:bg-purple-100 transition-colors flex items-center gap-3">
+                ${checkIcon}
+                <div class="flex-1">
+                    <p class="font-semibold text-base">${p.prenom} ${p.nom}</p>
+                    ${isPointed ? '<p class="text-xs text-green-600 font-medium">Déjà pointé</p>' : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Sélectionne un joueur depuis la liste de recherche
+ * @param {string} playerId - L'ID du joueur sélectionné
+ */
+function selectPlayerFromSearch(playerId) {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return;
+    
+    currentPlayer = player;
+    showPlayer(player);
+    
+    // Masquer la liste de résultats
+    document.getElementById('searchResults').classList.add('hidden');
 }
 
 function showPlayer(player) {
@@ -293,9 +515,12 @@ function showPlayer(player) {
 function resetPlayerCard() { 
     currentPlayer = null; 
     document.getElementById('playerCard').classList.add('hidden');
-    clearTimeout(cancelTimeout); // Ajout important
+    clearTimeout(cancelTimeout);
 }
 
+/**
+ * Gère le pointage/dépointage depuis la carte joueur
+ */
 function togglePresence() {
     if (!currentPlayer || !activeSession) return;
 
@@ -303,22 +528,19 @@ function togglePresence() {
     const alreadyPointedEntry = journalEntries.find(e => e.session === sessionKey && e.id === currentPlayer.id);
 
     if (alreadyPointedEntry) {
-        // --- ANNULATION DU POINTAGE ---
+        // ANNULATION DU POINTAGE
         journalEntries = journalEntries.filter(e => !(e.id === alreadyPointedEntry.id && e.session === sessionKey));
-        
-        // Affiche brièvement le feedback d'annulation
         showFeedback('Pointage annulé', 'orange', '↩️');
         clearTimeout(cancelTimeout);
         
-        // Revient à la carte du joueur après 1.5 secondes
+        // Revenir à la carte du joueur après 1.5 secondes
         setTimeout(() => {
             document.getElementById('feedback').classList.add('hidden');
             document.getElementById('playerCard').classList.remove('hidden');
-            updatePresenceButton(false); // Remet le bouton en état non-pointé
+            updatePresenceButton(false);
         }, 1500);
-
     } else {
-        // --- NOUVEAU POINTAGE ---
+        // NOUVEAU POINTAGE
         const entry = { 
             timestamp: new Date().toISOString(), 
             nom: currentPlayer.nom, 
@@ -327,19 +549,16 @@ function togglePresence() {
             session: sessionKey 
         };
         journalEntries.unshift(entry);
-        
-        // Affiche le feedback MAIS revient à la carte après
         showFeedback('Présence enregistrée !', 'green', '✅');
         
-        // Revient automatiquement à la carte du joueur après 2 secondes
-        // pour permettre l'annulation
+        // Revenir à la carte du joueur après 0.5 secondes
         setTimeout(() => {
             document.getElementById('feedback').classList.add('hidden');
             document.getElementById('playerCard').classList.remove('hidden');
-            updatePresenceButton(true); // Montre que le joueur est pointé
+            updatePresenceButton(true);
         }, 500);
 
-        // Réinitialise tout après 7 secondes si pas d'action
+        // Réinitialiser tout après 7 secondes si pas d'action
         cancelTimeout = setTimeout(() => {
             resetPointingInterface();
         }, 7000);
@@ -349,32 +568,46 @@ function togglePresence() {
     updateUI();
 }
 
+/**
+ * Met à jour l'apparence du bouton de présence
+ * @param {boolean} isPointed - Indique si le joueur est déjà pointé
+ */
 function updatePresenceButton(isPointed) {
     const content = document.getElementById('presenceButtonContent');
     const iconUnchecked = document.getElementById('iconUnchecked');
     const iconChecked = document.getElementById('iconChecked');
     const buttonText = document.getElementById('buttonText');
     const cancelMsg = document.getElementById('cancelMessage');
+    
     if (isPointed) {
-        content.classList.remove('bg-gray-100'); content.classList.add('bg-green-500', 'pulse-green');
-        iconUnchecked.classList.add('hidden'); iconChecked.classList.remove('hidden');
-        iconChecked.classList.add('text-white'); buttonText.textContent = 'Présence confirmée';
-        buttonText.classList.add('text-white'); cancelMsg.classList.remove('hidden');
+        content.classList.remove('bg-gray-100');
+        content.classList.add('bg-green-500', 'pulse-green');
+        iconUnchecked.classList.add('hidden');
+        iconChecked.classList.remove('hidden');
+        iconChecked.classList.add('text-white');
+        buttonText.textContent = 'Présence confirmée';
+        buttonText.classList.add('text-white');
+        cancelMsg.classList.remove('hidden');
     } else {
-        content.classList.add('bg-gray-100'); content.classList.remove('bg-green-500', 'pulse-green');
-        iconUnchecked.classList.remove('hidden'); iconChecked.classList.add('hidden');
-        buttonText.textContent = 'Touchez pour pointer'; buttonText.classList.remove('text-white');
+        content.classList.add('bg-gray-100');
+        content.classList.remove('bg-green-500', 'pulse-green');
+        iconUnchecked.classList.remove('hidden');
+        iconChecked.classList.add('hidden');
+        buttonText.textContent = 'Touchez pour pointer';
+        buttonText.classList.remove('text-white');
         cancelMsg.classList.add('hidden');
     }
 }
 
 function showFeedback(message, color, icon) {
-    const feedback = document.getElementById('feedback'), feedbackBox = document.getElementById('feedbackBox');
+    const feedback = document.getElementById('feedback');
+    const feedbackBox = document.getElementById('feedbackBox');
     document.getElementById('feedbackIcon').textContent = icon;
     document.getElementById('feedbackText').textContent = message;
     document.getElementById('feedbackName').textContent = `${currentPlayer.prenom} ${currentPlayer.nom}`;
     feedbackBox.className = `text-white rounded-2xl p-6 text-center shadow-lg bg-${color}-500`;
-    feedback.classList.remove('hidden'); document.getElementById('playerCard').classList.add('hidden');
+    feedback.classList.remove('hidden');
+    document.getElementById('playerCard').classList.add('hidden');
 }
 
 function resetPointingInterface() {
@@ -382,7 +615,9 @@ function resetPointingInterface() {
     document.getElementById('searchInput').value = '';
     document.getElementById('playerCard').classList.add('hidden');
     document.getElementById('feedback').classList.add('hidden');
-    currentPlayer = null; isPresenceBeingProcessed = false;
+    document.getElementById('searchResults').classList.add('hidden');
+    currentPlayer = null;
+    isPresenceBeingProcessed = false;
 }
 
 // ===================================================================================
@@ -398,7 +633,9 @@ function loadPlanning(file) {
             planningWorkbook = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
             document.getElementById('planningConfig').classList.remove('hidden');
             loadSheets();
-        } catch(error) { alert('Erreur lecture planning'); }
+        } catch(error) { 
+            alert('Erreur lecture planning'); 
+        }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -408,12 +645,19 @@ function loadSheets() {
     select.innerHTML = '<option value="">Sélectionnez un créneau...</option>';
     planningWorkbook.SheetNames.forEach(name => {
         const option = document.createElement('option');
-        option.value = name; option.textContent = name;
+        option.value = name;
+        option.textContent = name;
         select.appendChild(option);
     });
     document.getElementById('dateSelect').innerHTML = '<option value="">Sélectionnez une date...</option>';
 }
 
+/**
+ * Parse une valeur de cellule Excel en objet Date JavaScript
+ * Gère les dates Excel (nombres), les objets Date natifs et les chaînes
+ * @param {*} cellValue - La valeur brute de la cellule Excel
+ * @returns {Date|null} - L'objet Date correspondant ou null si invalide
+ */
 function parseCellAsDate(cellValue) {
     if (!cellValue) return null;
 
@@ -423,7 +667,7 @@ function parseCellAsDate(cellValue) {
         date = cellValue;
     } 
     else if (typeof cellValue === 'number' && cellValue > 1) {
-        // Conversion standard Excel -> JS
+        // Conversion standard Excel -> JS (nombre de jours depuis 1900-01-01)
         date = new Date((cellValue - 25569) * 86400 * 1000);
     } 
     else if (typeof cellValue === 'string') {
@@ -436,12 +680,17 @@ function parseCellAsDate(cellValue) {
     
     if (isNaN(date.getTime())) return null;
     
-    // SOLUTION PRAGMATIQUE : Ajouter 1 jour pour corriger le décalage
+    // Correction pragmatique du décalage de fuseau horaire
     date.setDate(date.getDate() + 1);
     
     return date;
 }
 
+/**
+ * Charge les dates disponibles depuis l'onglet sélectionné
+ * Parcourt les 10 premières lignes et 20 premières colonnes pour détecter les dates
+ * Présélectionne automatiquement la date du jour si elle est trouvée
+ */
 function loadDates() {
     const sheetName = document.getElementById('sheetSelect').value;
     const dateSelect = document.getElementById('dateSelect');
@@ -451,7 +700,7 @@ function loadDates() {
     const worksheet = planningWorkbook.Sheets[sheetName];
     const datesFound = [];
     
-    // Parcourir les cellules pour trouver les dates
+    // Parcourir les cellules pour trouver les dates (zone de recherche : 10 lignes x 20 colonnes)
     for (let r = 0; r < 10; r++) {
         for (let c = 0; c < 20; c++) {
             const cellAddress = XLSX.utils.encode_cell({c, r});
@@ -460,13 +709,13 @@ function loadDates() {
             if (cell && cell.v != null) {
                 let date = null;
                 
-                // Si c'est marqué comme une date ou si c'est un nombre qui pourrait être une date Excel
+                // Détecter si c'est une date (type 'd') ou un nombre qui ressemble à une date Excel
                 if (cell.t === 'd' || (cell.t === 'n' && cell.v > 40000 && cell.v < 50000)) {
                     date = parseCellAsDate(cell.v);
                 }
                 
+                // Valider que la date est dans une plage raisonnable (2000-2030)
                 if (date && !isNaN(date.getTime()) && date.getFullYear() > 2000 && date.getFullYear() < 2030) {
-                    // Formater la date correctement en français
                     const options = { weekday: 'short', day: '2-digit', month: 'short' };
                     const label = date.toLocaleDateString('fr-FR', options);
                     
@@ -480,32 +729,37 @@ function loadDates() {
         }
     }
     
-    // Éliminer les doublons
+    // Éliminer les doublons (dates identiques à des positions différentes)
     const uniqueDates = Array.from(new Map(datesFound.map(d => [d.label, d])).values());
     
-    // Trier par date
+    // Trier par ordre chronologique
     uniqueDates.sort((a, b) => a.date - b.date);
     
-    // Obtenir la date du jour sans l'heure
+    // Obtenir la date du jour sans l'heure pour la comparaison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Ajouter les options
+    // Créer les options de sélection et présélectionner la date du jour
     uniqueDates.forEach(d => {
         const option = document.createElement('option');
         option.value = d.value;
         option.textContent = d.label;
         dateSelect.appendChild(option);
         
-        // Sélectionner automatiquement la date du jour si trouvée
+        // Sélectionner automatiquement si c'est la date du jour (avec marge de 24h)
         const dateOnly = new Date(d.date);
         dateOnly.setHours(0, 0, 0, 0);
-        if (Math.abs(dateOnly.getTime() - today.getTime()) < 86400000) { // Moins de 24h de différence
+        if (Math.abs(dateOnly.getTime() - today.getTime()) < 86400000) {
             option.selected = true;
         }
     });
 }
 
+/**
+ * Démarre une nouvelle session de pointage
+ * Extrait les joueurs inscrits et en liste d'attente depuis le fichier Excel
+ * Sauvegarde la session dans le stockage local
+ */
 function startSession() {
     const sheet = document.getElementById('sheetSelect').value;
     const dateValue = document.getElementById('dateSelect').value;
@@ -521,30 +775,29 @@ function startSession() {
     const extractedAllParticipants = [];
     let isWaitlist = false;
 
+    // Parcourir toutes les lignes à partir de la ligne 4 (index 3)
     for (let r = 3; r <= maxRow; r++) {
-        const cellB = worksheet[XLSX.utils.encode_cell({c: 1, r: r})];
-        const cellC = worksheet[XLSX.utils.encode_cell({c: 2, r: r})];
-        const cellD = worksheet[XLSX.utils.encode_cell({c: 3, r: r})];
+        const cellB = worksheet[XLSX.utils.encode_cell({c: 1, r: r})]; // Colonne B = Nom
+        const cellC = worksheet[XLSX.utils.encode_cell({c: 2, r: r})]; // Colonne C = Prénom
+        const cellD = worksheet[XLSX.utils.encode_cell({c: 3, r: r})]; // Colonne D (détection liste d'attente)
 
-        // On récupère la valeur brute des cellules
         const nomValue = cellB ? cellB.v : undefined;
         const prenomValue = cellC ? cellC.v : undefined;
 
         const checkText = (nomValue || '') + (prenomValue || '') + (cellD ? cellD.v : '');
 
+        // Détecter si on entre dans la zone "Liste d'attente"
         if (String(checkText).toLowerCase().includes("liste d'attente")) {
             isWaitlist = true;
             continue;
         }
         
-        // LA CORRECTION CLÉ EST ICI :
-        // On vérifie seulement si la colonne NOM (B) contient quelque chose.
+        // Extraire le participant si la colonne NOM contient une valeur
         if (nomValue) { 
             const nom = String(nomValue).trim();
-            // Si le prénom est manquant, on met une chaîne vide ou un placeholder
-            const prenom = prenomValue ? String(prenomValue).trim() : ''; 
-            
+            const prenom = prenomValue ? String(prenomValue).trim() : '';
             const statut = isWaitlist ? "Liste d'attente" : "Inscrit";
+            
             extractedAllParticipants.push({
                 id: `P${String(r).padStart(3, '0')}`,
                 nom: nom,
@@ -559,14 +812,22 @@ function startSession() {
         return;
     }
     
-    // Le reste est inchangé
+    // Sauvegarder les participants et créer la session
     allParticipants = extractedAllParticipants;
     players = allParticipants.filter(p => p.statut === 'Inscrit');
     saveDataToStorage('badminton_all_participants', allParticipants);
 
     const [col, row] = dateValue.split('|');
     const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
-    activeSession = { sheet: sheet, dateLabel: dateLabel, columnIndex: parseInt(col), headerRow: parseInt(row), planningFileName: document.getElementById('planningFile').files[0].name };
+    
+    activeSession = {
+        sheet: sheet,
+        dateLabel: dateLabel,
+        columnIndex: parseInt(col),
+        headerRow: parseInt(row),
+        planningFileName: document.getElementById('planningFile').files[0].name
+    };
+    
     saveDataToStorage('badminton_session', activeSession);
     updateUI();
     alert(`Session démarrée. ${players.length} inscrits et ${allParticipants.length - players.length} en attente trouvés.`);
@@ -576,86 +837,172 @@ function startSession() {
 // ===================================================================================
 // EXPORT & BACKEND
 // ===================================================================================
+
+/**
+ * Vérifie la disponibilité du serveur backend
+ * Met à jour l'interface avec le statut du serveur (OK ou indisponible)
+ */
 async function checkBackendStatus() {
-    const statusDiv = document.getElementById('backendStatus'), icon = document.getElementById('backendIcon'), text = document.getElementById('backendText');
+    const statusDiv = document.getElementById('backendStatus');
+    const icon = document.getElementById('backendIcon');
+    const text = document.getElementById('backendText');
+    
     try {
         const response = await fetch(`${BACKEND_URL}/health`);
         if (!response.ok) throw new Error('Status not OK');
+        
         const data = await response.json();
         if (data.status === 'ok') {
             backendAvailable = true;
             statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-green-50 border-green-200';
-            icon.textContent = '✅'; text.textContent = 'Serveur OK. Les styles seront préservés.';
-        } else { throw new Error('Invalid response'); }
+            icon.textContent = '✅';
+            text.textContent = 'Serveur OK. Les styles seront préservés.';
+        } else {
+            throw new Error('Invalid response');
+        }
     } catch (error) {
         backendAvailable = false;
         statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-yellow-50 border-yellow-200';
-        icon.textContent = '⚠️'; text.textContent = 'Serveur indisponible. Les styles ne seront PAS préservés.';
+        icon.textContent = '⚠️';
+        text.textContent = 'Serveur indisponible. Les styles ne seront PAS préservés.';
     }
 }
 
+/**
+ * Télécharge le planning Excel mis à jour avec les présences
+ * Utilise le backend Python si disponible pour préserver les styles
+ * Sinon, effectue une mise à jour locale (sans préservation des styles)
+ */
 async function downloadPlanning() {
     if (!activeSession) return;
-    const downloadBtn = document.getElementById('downloadBtn'), messageP = document.getElementById('downloadMessage');
-    downloadBtn.disabled = true; messageP.textContent = 'Préparation...';
+    
+    const downloadBtn = document.getElementById('downloadBtn');
+    const messageP = document.getElementById('downloadMessage');
+    downloadBtn.disabled = true;
+    messageP.textContent = 'Préparation...';
 
     const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
-    const presences = journalEntries.filter(e => e.session === sessionKey).map(p => ({ nom: p.nom, prenom: p.prenom }));
+    const presences = journalEntries
+        .filter(e => e.session === sessionKey)
+        .map(p => ({ nom: p.nom, prenom: p.prenom }));
     
     if (backendAvailable) {
         messageP.textContent = 'Envoi au serveur...';
         try {
+            // Convertir le fichier en base64 pour l'envoi
             const fileReader = new FileReader();
             fileReader.readAsDataURL(new Blob([planningFileContent]));
             fileReader.onload = async () => {
                 const base64File = fileReader.result.split(',')[1];
+                
+                // Envoyer au backend Python
                 const response = await fetch(`${BACKEND_URL}/update-planning`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file: base64File, sheet: activeSession.sheet, columnIndex: activeSession.columnIndex, presences: presences, filename: `maj_${activeSession.planningFileName}` })
+                    body: JSON.stringify({
+                        file: base64File,
+                        sheet: activeSession.sheet,
+                        columnIndex: activeSession.columnIndex,
+                        presences: presences,
+                        filename: `maj_${activeSession.planningFileName}`
+                    })
                 });
+                
                 if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
+                
                 const data = await response.json();
                 if (!data.success) throw new Error(data.error);
+                
+                // Décoder le fichier base64 reçu et déclencher le téléchargement
                 const byteCharacters = atob(data.file);
                 const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
                 const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const blob = new Blob([byteArray], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+                
                 triggerDownload(blob, data.filename);
                 messageP.textContent = 'Téléchargement terminé !';
             };
-        } catch (error) { alert('Erreur serveur. Tentative locale...'); console.error(error); downloadLocally(presences); }
-    } else { downloadLocally(presences); }
-    setTimeout(() => { downloadBtn.disabled = false; messageP.textContent = ''; }, 3000);
+        } catch (error) {
+            alert('Erreur serveur. Tentative locale...');
+            console.error(error);
+            downloadLocally(presences);
+        }
+    } else {
+        downloadLocally(presences);
+    }
+    
+    setTimeout(() => {
+        downloadBtn.disabled = false;
+        messageP.textContent = '';
+    }, 3000);
 }
 
+/**
+ * Effectue une mise à jour locale du fichier Excel (sans backend)
+ * ⚠️ Les styles Excel ne sont PAS préservés avec cette méthode
+ * @param {Array} presences - Liste des présents à marquer dans le fichier
+ */
 function downloadLocally(presences) {
     alert("Traitement local, les styles seront perdus.");
+    
     const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
     const ws = wb.Sheets[activeSession.sheet];
     const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    
+    // Parcourir les lignes et marquer les présences avec 'V'
     for (let r = 3; r < data.length; r++) {
-        const nom = data[r][1], prenom = data[r][2];
+        const nom = data[r][1];
+        const prenom = data[r][2];
         if (!nom || !prenom) continue;
+        
         const isPresent = presences.some(p => p.nom === nom && p.prenom === prenom);
         const cellAddress = XLSX.utils.encode_cell({c: activeSession.columnIndex, r: r});
-        if (isPresent) { XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress }); } 
-        else { XLSX.utils.sheet_add_aoa(ws, [[null]], { origin: cellAddress }); }
+        
+        if (isPresent) {
+            XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress });
+        } else {
+            XLSX.utils.sheet_add_aoa(ws, [[null]], { origin: cellAddress });
+        }
     }
+    
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], {type: 'application/octet-stream'});
     triggerDownload(blob, `local_maj_${activeSession.planningFileName}`);
 }
 
+/**
+ * Déclenche le téléchargement d'un fichier blob
+ * @param {Blob} blob - Le contenu du fichier à télécharger
+ * @param {string} filename - Le nom du fichier à télécharger
+ */
 function triggerDownload(blob, filename) {
-    const url = window.URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click();
-    window.URL.revokeObjectURL(url); a.remove();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
 }
 
-function resetAll() { if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) { localStorage.removeItem('badminton_journal'); localStorage.removeItem('badminton_session'); location.reload(); } }
+/**
+ * Réinitialise complètement l'application
+ * Supprime toutes les données du stockage local
+ */
+function resetAll() {
+    if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) {
+        localStorage.removeItem('badminton_journal');
+        localStorage.removeItem('badminton_session');
+        localStorage.removeItem('badminton_all_participants');
+        location.reload();
+    }
+}
 </script>
 </body>
 </html>
