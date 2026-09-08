@@ -31,6 +31,7 @@ function loadDataFromStorage() {
         activeSession = null;
         allParticipants = [];
     }
+    players = allParticipants.filter(p => p.statut === 'Inscrit');
 }
 
 
