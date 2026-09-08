@@ -131,7 +131,9 @@ function downloadLocally(presences) {
         const isPresent = presences.some(p => p.nom === nom && p.prenom === prenom);
         const cellAddress = XLSX.utils.encode_cell({c: activeSession.columnIndex, r: r});
 
-        if (isPresent) {
+        if (isEssaiMarker(ws[cellAddress]?.v)) {
+            XLSX.utils.sheet_add_aoa(ws, [[isPresent ? 'ESSAI PRESENT' : 'ESSAI ABSENT']], { origin: cellAddress });
+        } else if (isPresent) {
             XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress });
         } else {
             XLSX.utils.sheet_add_aoa(ws, [[null]], { origin: cellAddress });

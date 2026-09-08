@@ -60,7 +60,10 @@ def update_planning():
             target_cell = ws.cell(row=row, column=col_idx_target)
 
             # 5. Mettre à jour la cellule
-            if player_key in present_players:
+            is_essai = str(target_cell.value or '').strip().upper() in ('ESSAI', 'ESSAI PRESENT', 'ESSAI ABSENT')
+            if is_essai:
+                target_cell.value = 'ESSAI PRESENT' if player_key in present_players else 'ESSAI ABSENT'
+            elif player_key in present_players:
                 target_cell.value = 'V'
             else:
                 # Important : vider la cellule si la personne n'est pas marquée présente

@@ -31,7 +31,7 @@ function loadDataFromStorage() {
         activeSession = null;
         allParticipants = [];
     }
-    players = allParticipants.filter(p => p.statut === 'Inscrit');
+    players = allParticipants.filter(p => p.statut === 'Inscrit' || p.statut === 'ESSAI');
 }
 
 

@@ -41,7 +41,7 @@ function updateParticipantsUI() {
         let bgColor = isInscrit ? 'bg-white' : 'bg-yellow-50';
         let borderColor = 'border-gray-200';
         let statusColor = isInscrit ? 'text-green-600 bg-green-100' : 'text-orange-600 bg-orange-100';
-        let statusText = isInscrit ? 'Inscrit' : 'Attente';
+        let statusText = isInscrit ? 'Inscrit' : (p.statut === 'ESSAI' ? 'ESSAI' : 'Attente');
         let pulseClass = '';
         let checkIcon = '';
 

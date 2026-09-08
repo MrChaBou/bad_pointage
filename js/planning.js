@@ -118,9 +118,13 @@ function loadDates() {
     });
 }
 
+function isEssaiMarker(value) {
+    return ['ESSAI', 'ESSAI PRESENT', 'ESSAI ABSENT'].includes(String(value ?? '').trim().toUpperCase());
+}
+
 /**
  * Démarre une nouvelle session de pointage
- * Extrait uniquement les inscrits avant le séparateur LISTE D'ATTENTE
+ * Extrait les inscrits et essais admissibles avant LISTE D'ATTENTE
  * Sauvegarde la session dans le stockage local
  */
 function startSession() {
@@ -134,6 +138,11 @@ function startSession() {
     const worksheet = planningWorkbook.Sheets[sheet];
     const range = XLSX.utils.decode_range(worksheet['!ref']);
     const maxRow = range.e.r;
+    const [col, row] = dateValue.split('|');
+    const columnIndex = parseInt(col);
+    const dateColumns = [...new Set(Array.from(document.getElementById('dateSelect').options)
+        .filter(option => option.value)
+        .map(option => parseInt(option.value.split('|')[0])))];
 
     const extractedAllParticipants = [];
 
@@ -156,7 +165,10 @@ function startSession() {
         if (nomValue) {
             const nom = String(nomValue).trim();
             const prenom = prenomValue ? String(prenomValue).trim() : '';
-            const statut = "Inscrit";
+            const isEssai = dateColumns.some(c =>
+                isEssaiMarker(worksheet[XLSX.utils.encode_cell({c, r})]?.v));
+            if (isEssai && !isEssaiMarker(worksheet[XLSX.utils.encode_cell({c: columnIndex, r})]?.v)) continue;
+            const statut = isEssai ? 'ESSAI' : 'Inscrit';
 
             extractedAllParticipants.push({
                 id: `P${String(r).padStart(3, '0')}`,
@@ -174,22 +186,22 @@ function startSession() {
 
     // Sauvegarder les participants et créer la session
     allParticipants = extractedAllParticipants;
-    players = allParticipants.filter(p => p.statut === 'Inscrit');
+    players = allParticipants.filter(p => p.statut === 'Inscrit' || p.statut === 'ESSAI');
     saveDataToStorage('badminton_all_participants', allParticipants);
 
-    const [col, row] = dateValue.split('|');
     const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
 
     activeSession = {
         sheet: sheet,
         dateLabel: dateLabel,
-        columnIndex: parseInt(col),
+        columnIndex: columnIndex,
         headerRow: parseInt(row),
         planningFileName: document.getElementById('planningFile').files[0].name
     };
 
     saveDataToStorage('badminton_session', activeSession);
+    resetPointingInterface();
     updateUI();
-    alert(`Session démarrée. ${players.length} inscrits chargés. La liste d'attente a été ignorée.`);
+    alert(`Session démarrée. ${players.length} participants chargés. La liste d'attente a été ignorée.`);
     switchTab('participants');
 }
