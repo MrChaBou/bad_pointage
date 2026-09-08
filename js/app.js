@@ -457,7 +457,7 @@ function loadPlanning(file) {
     reader.onload = function(e) {
         try {
             planningFileContent = new Uint8Array(e.target.result);
-            planningWorkbook = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
+            planningWorkbook = XLSX.read(planningFileContent, { type: 'array', cellDates: false });
             document.getElementById('planningConfig').classList.remove('hidden');
             loadSheets();
         } catch(error) { 
@@ -480,35 +480,19 @@ function loadSheets() {
 }
 
 /**
- * Parse une valeur de cellule Excel en objet Date JavaScript
- * Gère les dates Excel (nombres), les objets Date natifs et les chaînes
+ * Convertit un numéro de série Excel moderne en jour calendaire à minuit UTC.
+ * Ignore la fraction horaire et tient compte du calendrier 1904.
  * @param {*} cellValue - La valeur brute de la cellule Excel
+ * @param {boolean} date1904 - Le classeur utilise le calendrier 1904
  * @returns {Date|null} - L'objet Date correspondant ou null si invalide
  */
-function parseCellAsDate(cellValue) {
-    if (!cellValue) return null;
+function parseCellAsDate(cellValue, date1904 = false) {
+    if (typeof cellValue !== 'number' || !Number.isFinite(cellValue)) return null;
 
-    let date;
-    
-    if (cellValue instanceof Date) {
-        date = cellValue;
-    } 
-    else if (typeof cellValue === 'number' && cellValue > 1) {
-        // Conversion standard Excel -> JS (nombre de jours depuis 1900-01-01)
-        date = new Date((cellValue - 25569) * 86400 * 1000);
-    } 
-    else if (typeof cellValue === 'string') {
-        date = new Date(cellValue);
-        if (isNaN(date.getTime())) return null;
-    } 
-    else {
-        return null;
-    }
+    const excelDay = Math.floor(cellValue) + (date1904 ? 1462 : 0);
+    const date = new Date((excelDay - 25569) * 86400000);
     
     if (isNaN(date.getTime())) return null;
-    
-    // Correction pragmatique du décalage de fuseau horaire
-    date.setDate(date.getDate() + 1);
     
     return date;
 }
@@ -525,6 +509,8 @@ function loadDates() {
     if (!sheetName) return;
 
     const worksheet = planningWorkbook.Sheets[sheetName];
+    const date1904Flag = planningWorkbook.Workbook?.WBProps?.date1904;
+    const date1904 = date1904Flag === true || date1904Flag === 1 || date1904Flag === '1' || date1904Flag === 'true';
     const datesFound = [];
     
     // Parcourir les cellules pour trouver les dates (zone de recherche : 10 lignes x 20 colonnes)
@@ -536,14 +522,15 @@ function loadDates() {
             if (cell && cell.v != null) {
                 let date = null;
                 
-                // Détecter si c'est une date (type 'd') ou un nombre qui ressemble à une date Excel
-                if (cell.t === 'd' || (cell.t === 'n' && cell.v > 40000 && cell.v < 50000)) {
-                    date = parseCellAsDate(cell.v);
+                // Comparer les séries dans le calendrier 1900, quel que soit celui du classeur.
+                const excelDay = Math.floor(cell.v) + (date1904 ? 1462 : 0);
+                if (cell.t === 'n' && excelDay > 40000 && excelDay < 50000) {
+                    date = parseCellAsDate(cell.v, date1904);
                 }
                 
                 // Valider que la date est dans une plage raisonnable (2000-2030)
-                if (date && !isNaN(date.getTime()) && date.getFullYear() > 2000 && date.getFullYear() < 2030) {
-                    const options = { weekday: 'short', day: '2-digit', month: 'short' };
+                if (date && !isNaN(date.getTime()) && date.getUTCFullYear() > 2000 && date.getUTCFullYear() < 2030) {
+                    const options = { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'UTC' };
                     const label = date.toLocaleDateString('fr-FR', options);
                     
                     datesFound.push({
@@ -562,9 +549,9 @@ function loadDates() {
     // Trier par ordre chronologique
     uniqueDates.sort((a, b) => a.date - b.date);
     
-    // Obtenir la date du jour sans l'heure pour la comparaison
+    // Représenter le jour local courant à minuit UTC pour une comparaison calendaire.
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
     
     // Créer les options de sélection et présélectionner la date du jour
     uniqueDates.forEach(d => {
@@ -573,10 +560,8 @@ function loadDates() {
         option.textContent = d.label;
         dateSelect.appendChild(option);
         
-        // Sélectionner automatiquement si c'est la date du jour (avec marge de 24h)
-        const dateOnly = new Date(d.date);
-        dateOnly.setHours(0, 0, 0, 0);
-        if (Math.abs(dateOnly.getTime() - today.getTime()) < 86400000) {
+        // Sélectionner uniquement le même jour calendaire.
+        if (d.date.getTime() === todayUTC) {
             option.selected = true;
         }
     });
