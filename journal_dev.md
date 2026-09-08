@@ -200,3 +200,21 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 - Serveur HTTP temporaire : HTML/CSS/JS en HTTP 200 avec types MIME corrects
   à la racine et sous `/bad_pointage/`. Serveur arrêté après vérification.
 - `index.html` passe de 1 011 lignes / 44 653 octets à 162 lignes / 10 036 octets.
+
+## Anomalie connue — BUG-UI-SEARCH-DELAY
+
+- **Contexte :** observation manuelle après le démarrage d'une session, dans
+  l'onglet `Pointer`, avant le téléchargement de la liste mise à jour.
+- **Symptôme :** le champ « Recherchez votre nom » est visible, mais semble
+  temporairement gelé / non réactif pendant quelques secondes. Il devient
+  utilisable après un délai dont la durée exacte n'a pas été mesurée.
+- **Impact utilisateur :** retard au démarrage de la recherche et du pointage ;
+  l'interface visible peut donner l'impression d'être bloquée.
+- **Reproduction à confirmer :** charger un planning, démarrer une session,
+  ouvrir immédiatement `Pointer` et tenter de saisir dans « Recherchez votre
+  nom » ; observer la réactivité immédiate, puis réessayer après quelques
+  secondes, sans télécharger la liste mise à jour entre ces essais.
+- **État :** non analysé / non corrigé ; signalement du pilote, sans nouvelle
+  reproduction par l'agent. Fréquence et conditions exactes à préciser.
+- **Cause :** indéterminée ; aucun lien établi avec l'export ou l'extraction
+  CSS/JS. Aucun correctif ni changement de logique appliqué.
