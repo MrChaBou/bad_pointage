@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Données réelles
+*.xlsx
+*.xls
+
+# Archives locales
+old_bad/
+old_doc/
+En ligne/
