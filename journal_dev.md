@@ -179,3 +179,24 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
   health/CORS sur trois origines et POST sur 16 variantes, attente inchangée.
 - Comparaison du code : HTML/UI et fonctions hors des deux fonctions modifiées
   et de la configuration backend inchangés. Aucun nouveau test navigateur.
+
+
+## Extraction mécanique du frontend — étape 1
+
+- CSS inline transféré tel quel dans `css/app.css` ; JavaScript inline
+  transféré tel quel dans `js/app.js`.
+- `index.html` charge ces fichiers par chemins relatifs. Le script reste
+  classique, en fin de page, sans module ni changement des gestionnaires inline.
+- Structure documentée dans README et PRD ; aucun changement fonctionnel.
+- Fichiers datés, backend, données Excel et `En ligne/` inchangés.
+- Tests manuels du refactor validés par le pilote avant création du commit.
+- Contrôles : CSS/JS identiques octet pour octet aux blocs initiaux ;
+  reconstruction de l'ancien HTML exacte ; syntaxe JS et fonctions globales OK.
+- Scénarios de non-régression repris dans des scripts temporaires (les anciens
+  scripts temporaires ne sont plus disponibles) : 30 onglets avec SheetJS 0.18.5
+  réel, dont Mercredi 20h00 à 21h45 = 46 ; 16 variantes de séparateur au
+  chargement et à l'export, recherche/sélection, pointage/annulation et compteurs.
+  Le DOM est simulé ; aucun nouveau test visuel navigateur.
+- Serveur HTTP temporaire : HTML/CSS/JS en HTTP 200 avec types MIME corrects
+  à la racine et sous `/bad_pointage/`. Serveur arrêté après vérification.
+- `index.html` passe de 1 011 lignes / 44 653 octets à 162 lignes / 10 036 octets.

@@ -132,6 +132,17 @@ backend Flask local est nécessaire à l'export avec openpyxl, malgré la mentio
 historique « pas besoin de serveur externe ».
 
 `index.html` est la source frontend canonique du projet.
+Structure du frontend sans étape de build :
+
+- `index.html` : structure HTML et gestionnaires inline existants.
+- `css/app.css` : styles personnalisés extraits sans modification.
+- `js/app.js` : script classique, chargé en fin de page ; fonctions globales
+  conservées pour les gestionnaires `onclick`/`onchange`.
+
+Les chemins relatifs `css/app.css` et `js/app.js` fonctionnent également sous
+`/bad_pointage/`. Publier les trois fichiers ensemble. Les dépendances Tailwind
+et SheetJS restent chargées par CDN dans leur ordre initial.
+
 
 - `main:index.html` est la version servie par GitHub Pages.
 - `dev/local-test-cycle:index.html` est la version de développement/test.

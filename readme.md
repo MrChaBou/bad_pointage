@@ -127,6 +127,17 @@ Après un rechargement de page, recharger le planning et redémarrer la session 
 la restauration complète n'est pas corrigée dans cette étape.
 
 `index.html` est la source frontend canonique du projet.
+Structure du frontend sans étape de build :
+
+- `index.html` : structure HTML et gestionnaires inline existants.
+- `css/app.css` : styles personnalisés extraits sans modification.
+- `js/app.js` : script classique, chargé en fin de page ; fonctions globales
+  conservées pour les gestionnaires `onclick`/`onchange`.
+
+Les chemins relatifs `css/app.css` et `js/app.js` fonctionnent également sous
+`/bad_pointage/`. Publier les trois fichiers ensemble. Les dépendances Tailwind
+et SheetJS restent chargées par CDN dans leur ordre initial.
+
 - `main:index.html` est la version servie par GitHub Pages.
 - `dev/local-test-cycle:index.html` est la version de développement/test.
 - `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
@@ -163,8 +174,8 @@ Pour déployer votre propre version de l'application :
 ### 2. Frontend (sur GitHub Pages)
 
 1.  Créez un nouveau dépôt sur GitHub.
-2.  Ajoutez votre fichier `index.html` au dépôt.
-3.  **IMPORTANT :** Dans `index.html`, modifiez la constante `BACKEND_URL` pour qu'elle corresponde à votre URL PythonAnywhere :
+2.  Ajoutez `index.html`, `css/app.css` et `js/app.js` au dépôt.
+3.  **IMPORTANT :** Dans `js/app.js`, modifiez la constante `BACKEND_URL` pour qu'elle corresponde à votre URL PythonAnywhere :
     ```javascript
     const BACKEND_URL = 'https://VOTRE_NOM.eu.pythonanywhere.com';
     ```
