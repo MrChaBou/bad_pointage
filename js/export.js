@@ -38,7 +38,10 @@ async function checkBackendStatus() {
  * Sinon, effectue une mise à jour locale (sans préservation des styles)
  */
 async function downloadPlanning() {
-    if (!activeSession) return;
+    if (getPlanningExportError()) {
+        updatePlanningExportUI();
+        return;
+    }
 
     const downloadBtn = document.getElementById('downloadBtn');
     const messageP = document.getElementById('downloadMessage');
@@ -54,9 +57,15 @@ async function downloadPlanning() {
         messageP.textContent = 'Envoi au serveur...';
         try {
             // Convertir le fichier en base64 pour l'envoi
+            const sourceContent = planningFileContent;
+            const sourceSession = activeSession;
             const fileReader = new FileReader();
             fileReader.readAsDataURL(new Blob([planningFileContent]));
             fileReader.onload = async () => {
+                if (sourceContent !== planningFileContent || sourceSession !== activeSession || getPlanningExportError()) {
+                    updatePlanningExportUI();
+                    return;
+                }
                 const base64File = fileReader.result.split(',')[1];
 
                 // Envoyer au backend Python
@@ -101,8 +110,7 @@ async function downloadPlanning() {
     }
 
     setTimeout(() => {
-        downloadBtn.disabled = false;
-        messageP.textContent = '';
+        updatePlanningExportUI();
     }, 3000);
 }
 
@@ -112,6 +120,10 @@ async function downloadPlanning() {
  * @param {Array} presences - Liste des présents à marquer dans le fichier
  */
 function downloadLocally(presences) {
+    if (getPlanningExportError()) {
+        updatePlanningExportUI();
+        return;
+    }
     alert("Traitement local, les styles seront perdus.");
 
     const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });

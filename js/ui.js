@@ -32,7 +32,6 @@ function updateUI() {
         document.getElementById('searchInput').parentElement.classList.remove('hidden');
         document.getElementById('sessionActiveAdmin').classList.remove('hidden');
         document.getElementById('activeSessionInfo').textContent = `${activeSession.sheet} - ${activeSession.dateLabel}`;
-        document.getElementById('downloadBtn').disabled = false;
     } else {
         document.getElementById('sessionInfo').classList.add('hidden');
         document.getElementById('noSessionMessage').classList.remove('hidden');
@@ -40,8 +39,8 @@ function updateUI() {
         document.getElementById('playerCard').classList.add('hidden');
         document.getElementById('feedback').classList.add('hidden');
         document.getElementById('sessionActiveAdmin').classList.add('hidden');
-        document.getElementById('downloadBtn').disabled = true;
     }
+    updatePlanningExportUI();
 
     // Mise à jour du journal
     const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
@@ -61,4 +60,10 @@ function updateUI() {
             </div>
         `).join('');
     }
+}
+
+function updatePlanningExportUI() {
+    const error = getPlanningExportError();
+    document.getElementById('downloadBtn').disabled = !!error;
+    document.getElementById('downloadMessage').textContent = activeSession ? error : '';
 }
