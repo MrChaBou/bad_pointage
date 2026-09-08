@@ -18,23 +18,45 @@ J'ai chargé la liste des participants 'Pointage des créneaux - 2026-2027-2.xls
 
 ## Cycle de développement et test local
 
-Depuis la racine du projet, dans Bash/WSL avec Python 3 :
+Depuis la racine du projet. Utiliser un environnement virtuel créé pour le
+système utilisé ; un virtualenv Windows n'est pas interchangeable avec WSL.
+
+### Windows / Git Bash
+
+```bash
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+```
+
+Terminal 1 — backend :
+
+```bash
+.venv/Scripts/python.exe -m flask --app ./flask_app.py:app run --host 127.0.0.1 --port 5000
+```
+
+Terminal 2 — frontend :
+
+```bash
+.venv/Scripts/python.exe -m http.server 8000 --bind 127.0.0.1
+```
+
+### Linux / WSL / macOS
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Terminal 1 — backend Flask :
+Terminal 1 — backend :
 
 ```bash
-.venv/bin/python -m flask --app ./260907_flask_app.py:app run --host 127.0.0.1 --port 5000
+.venv/bin/python -m flask --app ./flask_app.py:app run --host 127.0.0.1 --port 5000
 ```
 
 Terminal 2 — frontend :
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1
+.venv/bin/python -m http.server 8000 --bind 127.0.0.1
 ```
 
 Ouvrir `http://127.0.0.1:8000/index.html?v=260908` (pas un fichier `file://`).
@@ -65,12 +87,12 @@ la restauration complète n'est pas corrigée dans cette étape.
 `index.html` est la source frontend canonique du projet.
 - `main:index.html` est la version servie par GitHub Pages.
 - `dev/local-test-cycle:index.html` est la version de développement/test.
-- `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
-  source de vérité et ne doit pas remplacer `index.html`.
-- Le backend de travail reste `260907_flask_app.py` : Flask local en développement,
-  Flask sur PythonAnywhere en production.
-- Les fichiers datés et `En ligne/` existent toujours ; aucune suppression ni
-  modification du déploiement n'est effectuée.
+- Frontend canonique : `index.html` ; backend canonique actif : `flask_app.py`.
+- Le backend utilise Flask local en développement et Flask/PythonAnywhere en production.
+- Les fichiers datés ne sont plus des sources de vérité. Le frontend daté est
+  archivé dans `old_bad/260907_badminton.html`, hors du contenu suivi de la branche.
+- `old_bad/` sert uniquement d'archive locale ignorée par Git ; `En ligne/` reste
+  également local et ignoré. Aucun changement du déploiement.
 Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 
 ### Validation de cette étape
@@ -95,7 +117,7 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 
 ## 07/09/2026 — Exclusion de la liste d'attente
 
-- Correctif limité à `260907_badminton.html` et `260907_flask_app.py` :
+- Correctif limité à `260907_badminton.html` et `flask_app.py` :
   `startSession()`, `update_planning()` et `downloadLocally()` s'arrêtent avant
   le séparateur « LISTE D'ATTENTE » détecté en A:D. Normalisation de la casse,
   des apostrophes typographiques et des espaces insécables/multiples.
@@ -130,7 +152,8 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
   à 46 ; la liste d'attente n'est plus chargée.
 - Le navigateur avait initialement servi une ancienne version du HTML en cache.
   Une URL avec une query string a permis de confirmer l'exécution du nouveau
-  code, par exemple `http://127.0.0.1:8000/260907_badminton.html?v=20260908`.
+  code. Pour le frontend désormais canonique, utiliser
+  `http://127.0.0.1:8000/index.html?v=20260908`.
   En cas de doute, changer cette valeur, ou désactiver le cache dans les outils
   de développement puis recharger la page. Recharger ensuite le planning et
   redémarrer la session pour renouveler les participants conservés.
@@ -203,18 +226,53 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 
 ## Anomalie connue — BUG-UI-SEARCH-DELAY
 
-- **Contexte :** observation manuelle après le démarrage d'une session, dans
-  l'onglet `Pointer`, avant le téléchargement de la liste mise à jour.
-- **Symptôme :** le champ « Recherchez votre nom » est visible, mais semble
-  temporairement gelé / non réactif pendant quelques secondes. Il devient
-  utilisable après un délai dont la durée exacte n'a pas été mesurée.
-- **Impact utilisateur :** retard au démarrage de la recherche et du pointage ;
-  l'interface visible peut donner l'impression d'être bloquée.
-- **Reproduction à confirmer :** charger un planning, démarrer une session,
-  ouvrir immédiatement `Pointer` et tenter de saisir dans « Recherchez votre
-  nom » ; observer la réactivité immédiate, puis réessayer après quelques
-  secondes, sans télécharger la liste mise à jour entre ces essais.
-- **État :** non analysé / non corrigé ; signalement du pilote, sans nouvelle
-  reproduction par l'agent. Fréquence et conditions exactes à préciser.
-- **Cause :** indéterminée ; aucun lien établi avec l'export ou l'extraction
-  CSS/JS. Aucun correctif ni changement de logique appliqué.
+- **Contexte :** observation manuelle du pilote après le démarrage d'une session,
+  dans l'onglet `Pointer`.
+- **Symptôme précisé :** le champ « Recherchez votre nom » reste indisponible
+  tant qu'aucun participant n'a été pointé depuis la liste chargée. Il devient
+  utilisable immédiatement après le premier pointage depuis cette liste.
+  Cette observation remplace la description initiale d'un simple délai de
+  quelques secondes ; aucun déblocage par le seul écoulement du temps n'est établi.
+- **Impact utilisateur :** la recherche ne permet pas d'effectuer le premier
+  pointage de la session ; le pilote doit d'abord pointer depuis la liste.
+- **Séquence observée :** charger un planning, démarrer une session, ouvrir
+  `Pointer` et constater l'indisponibilité du champ ; pointer un participant
+  depuis la liste chargée, puis revenir à `Pointer` : le champ est immédiatement
+  utilisable.
+- **État :** non analysé / non corrigé ; comportement précisé par le pilote lors
+  de la validation manuelle de la normalisation. Pas de reproduction par l'agent.
+- **Cause :** indéterminée ; le premier pointage est le déclencheur observé du
+  déblocage, sans diagnostic technique établi. Aucun correctif ni changement
+  de logique appliqué.
+
+## Normalisation du backend et archivage du frontend daté
+
+- Backend renommé en `flask_app.py`, contenu strictement identique ; il devient
+  le backend canonique actif. Toutes les références documentaires au backend
+  utilisent ce nom, y compris les descriptions des étapes antérieures.
+- Frontend daté déplacé vers `old_bad/260907_badminton.html`, archive locale
+  ignorée et retirée du suivi Git ; `index.html` reste inchangé.
+- Commandes locales séparées pour Windows/Git Bash et Linux/WSL/macOS.
+- Aucun changement métier, aucun correctif de BUG-UI-SEARCH-DELAY ni changement du backend déployé sur
+  PythonAnywhere ; aucune modification de `En ligne/`, main ou GitHub Pages.
+- Validation manuelle confirmée par le pilote : `/health` HTTP 200, pointage et
+  mise à jour Excel fonctionnels, export avec mise en forme préservée et liste
+  d’attente correctement exclue.
+- Commit et push non effectués ; autorisation de commit toujours attendue.
+- Vérifications répétées à la reprise du 08/09/2026, avec comparaison à
+  `f16e451` : backend identique octet pour octet à sa
+  version datée ; archive frontend identique à l'original ; index/CSS/JS inchangés.
+- Démarrage réel avec `.venv/bin/python -m flask --app ./flask_app.py:app run
+  --host 127.0.0.1 --port 5000` validé ; GET `/health` HTTP 200 ; CORS GET et
+  OPTIONS validés pour les deux origines locales et GitHub Pages.
+- POST HTTP `/update-planning` : 48 requêtes réussies (16 variantes du séparateur
+  en A:D sur chacune des trois origines CORS), présence et absence traitées avant
+  la frontière ; séparateur, valeurs et formules après inchangés, style testé conservé.
+  Classeurs synthétiques en mémoire ; serveur arrêté après les tests.
+- Le frontend utilise les mêmes routes et le même contrat JSON ; le nom du
+  fichier Python n'intervient pas dans ses requêtes. Pas de nouveau test navigateur.
+- À la reprise, les sockets ont nécessité une exécution autorisée hors du bac
+  à sable. Le premier délai de démarrage de 5 secondes était insuffisant ;
+  le test a réussi avec un délai maximal de 30 secondes, sans modification du backend.
+- La commande Windows/Git Bash est documentée ; les tests automatisés ci-dessus
+  ont été réalisés sous WSL. Les tests manuels demandés sont terminés selon le pilote.

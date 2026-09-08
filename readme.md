@@ -82,23 +82,45 @@ L'utilisation de l'application est conçue pour être la plus simple possible :
 
 ## Cycle de développement et test local
 
-Depuis la racine du projet, dans Bash/WSL avec Python 3 :
+Depuis la racine du projet. Utiliser un environnement virtuel créé pour le
+système utilisé ; un virtualenv Windows n'est pas interchangeable avec WSL.
+
+### Windows / Git Bash
 
 ```bash
-python3 -m venv .venv
+python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
 ```
 
-Terminal 1 — backend Flask :
+Terminal 1 — backend :
 
 ```bash
-.venv/Scripts/python.exe -m flask --app ./260907_flask_app.py:app run --host 127.0.0.1 --port 5000
+.venv/Scripts/python.exe -m flask --app ./flask_app.py:app run --host 127.0.0.1 --port 5000
 ```
 
 Terminal 2 — frontend :
 
 ```bash
-python -m http.server 8000 --bind 127.0.0.1
+.venv/Scripts/python.exe -m http.server 8000 --bind 127.0.0.1
+```
+
+### Linux / WSL / macOS
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+Terminal 1 — backend :
+
+```bash
+.venv/bin/python -m flask --app ./flask_app.py:app run --host 127.0.0.1 --port 5000
+```
+
+Terminal 2 — frontend :
+
+```bash
+.venv/bin/python -m http.server 8000 --bind 127.0.0.1
 ```
 
 Ouvrir `http://127.0.0.1:8000/index.html?v=260908` (pas un fichier `file://`).
@@ -140,12 +162,12 @@ et SheetJS restent chargées par CDN dans leur ordre initial.
 
 - `main:index.html` est la version servie par GitHub Pages.
 - `dev/local-test-cycle:index.html` est la version de développement/test.
-- `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
-  source de vérité et ne doit pas remplacer `index.html`.
-- Le backend de travail reste `260907_flask_app.py` : Flask local en développement,
-  Flask sur PythonAnywhere en production.
-- Les fichiers datés et `En ligne/` existent toujours ; aucune suppression ni
-  modification du déploiement n'est effectuée.
+- Frontend canonique : `index.html` ; backend canonique actif : `flask_app.py`.
+- Le backend utilise Flask local en développement et Flask/PythonAnywhere en production.
+- Les fichiers datés ne sont plus des sources de vérité. Le frontend daté est
+  archivé dans `old_bad/260907_badminton.html`, hors du contenu suivi de la branche.
+- `old_bad/` sert uniquement d'archive locale ignorée par Git ; `En ligne/` reste
+  également local et ignoré. Aucun changement du déploiement.
 Le correctif du 07/09/2026 exclut la liste d'attente du chargement et des écritures de présence.
 Après sa mise en place, recharger le planning et redémarrer la session pour remplacer
 la liste conservée dans le navigateur. Aucun refactor ni traitement des essais, du tri
