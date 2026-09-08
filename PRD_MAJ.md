@@ -131,7 +131,16 @@ historiques ci-dessus ne sont pas révisées à cette étape. Pour ce cycle, un
 backend Flask local est nécessaire à l'export avec openpyxl, malgré la mention
 historique « pas besoin de serveur externe ».
 
-- Fichiers de travail : `260907_badminton.html` et `260907_flask_app.py`.
+`index.html` est la source frontend canonique du projet.
+
+- `main:index.html` est la version servie par GitHub Pages.
+- `dev/local-test-cycle:index.html` est la version de développement/test.
+- `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
+  source de vérité et ne doit pas remplacer `index.html`.
+- Le backend de travail reste `260907_flask_app.py` : Flask local en développement,
+  Flask sur PythonAnywhere en production.
+- Les fichiers datés et `En ligne/` existent toujours ; aucune suppression ni
+  modification du déploiement n'est effectuée.
 - Frontend HTTP sur `127.0.0.1:8000` ; backend sur `127.0.0.1:5000`.
 - Sur `localhost` ou `127.0.0.1`, le frontend sélectionne le backend local ;
   sur GitHub Pages, il conserve `https://mrchabou.eu.pythonanywhere.com`.

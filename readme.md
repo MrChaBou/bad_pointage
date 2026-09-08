@@ -17,7 +17,7 @@ De plus, le processus manuel (pointer sur papier, puis reporter dans Excel) est 
 
 Cette application adopte une approche hybride pour résoudre ce problème :
 
-1.  **Un Frontend Léger et Mobile (`badminton.html`) :** Une interface simple et tactile, utilisable sur n'importe quel smartphone via un navigateur. Elle gère le chargement du fichier, la sélection de la session et l'interface de pointage.
+1.  **Un Frontend Léger et Mobile (`index.html`) :** Une interface simple et tactile, utilisable sur n'importe quel smartphone via un navigateur. Elle gère le chargement du fichier, la sélection de la session et l'interface de pointage.
 
 2.  **Un Backend Puissant en Python (`flask_app.py`) :** Un micro-service hébergé gratuitement sur PythonAnywhere. Lorsque l'utilisateur exporte les présences, le frontend envoie le fichier Excel original et la liste des présents au backend. Le backend utilise la bibliothèque **Openpyxl**, qui est capable de modifier le contenu des cellules **sans jamais altérer les styles, les formules ou les cellules fusionnées**.
 
@@ -101,7 +101,7 @@ Terminal 2 — frontend :
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Ouvrir `http://127.0.0.1:8000/260907_badminton.html` (pas un fichier `file://`).
+Ouvrir `http://127.0.0.1:8000/index.html?v=260908` (pas un fichier `file://`).
 Le frontend servi sur `localhost` ou `127.0.0.1` appelle `http://127.0.0.1:5000`.
 Sur GitHub Pages, il conserve `https://mrchabou.eu.pythonanywhere.com`.
 Le backend autorise les origines `http://127.0.0.1:8000`,
@@ -126,9 +126,15 @@ sont propres à chaque origine ; garder la même adresse pour les essais.
 Après un rechargement de page, recharger le planning et redémarrer la session :
 la restauration complète n'est pas corrigée dans cette étape.
 
-Les fichiers de travail sont `260907_badminton.html` et `260907_flask_app.py`.
-`En ligne/` reste inchangé : cette procédure ne déploie rien. Le `index.html`
-issu du dépôt Git de référence n'est pas le frontend de test local.
+`index.html` est la source frontend canonique du projet.
+- `main:index.html` est la version servie par GitHub Pages.
+- `dev/local-test-cycle:index.html` est la version de développement/test.
+- `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
+  source de vérité et ne doit pas remplacer `index.html`.
+- Le backend de travail reste `260907_flask_app.py` : Flask local en développement,
+  Flask sur PythonAnywhere en production.
+- Les fichiers datés et `En ligne/` existent toujours ; aucune suppression ni
+  modification du déploiement n'est effectuée.
 Le correctif du 07/09/2026 exclut la liste d'attente du chargement et des écritures de présence.
 Après sa mise en place, recharger le planning et redémarrer la session pour remplacer
 la liste conservée dans le navigateur. Aucun refactor ni traitement des essais, du tri
@@ -157,13 +163,13 @@ Pour déployer votre propre version de l'application :
 ### 2. Frontend (sur GitHub Pages)
 
 1.  Créez un nouveau dépôt sur GitHub.
-2.  Ajoutez votre fichier `badminton.html` au dépôt.
-3.  **IMPORTANT :** Dans `badminton.html`, modifiez la constante `BACKEND_URL` pour qu'elle corresponde à votre URL PythonAnywhere :
+2.  Ajoutez votre fichier `index.html` au dépôt.
+3.  **IMPORTANT :** Dans `index.html`, modifiez la constante `BACKEND_URL` pour qu'elle corresponde à votre URL PythonAnywhere :
     ```javascript
     const BACKEND_URL = 'https://VOTRE_NOM.eu.pythonanywhere.com';
     ```
 4.  Dans les paramètres de votre dépôt GitHub (`Settings` -> `Pages`), activez GitHub Pages pour la branche `main`.
-5.  Votre application sera accessible à l'adresse `https://VOTRE_NOM_GITHUB.github.io/NOM_DU_DEPOT/badminton.html`.
+5.  Votre application sera accessible à l'adresse `https://VOTRE_NOM_GITHUB.github.io/NOM_DU_DEPOT/index.html`.
 
 ---
 ## 💡 Évolutions Possibles

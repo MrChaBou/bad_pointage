@@ -177,7 +177,9 @@
 // ===================================================================================
 // CONFIGURATION & ÉTAT GLOBAL
 // ===================================================================================
-const BACKEND_URL = 'https://mrchabou.eu.pythonanywhere.com';
+const BACKEND_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'http://127.0.0.1:5000'
+    : 'https://mrchabou.eu.pythonanywhere.com';
 
 let players = [], allParticipants = [], journalEntries = [], currentPlayer = null, activeSession = null;
 let planningWorkbook = null, planningFileContent = null;
@@ -757,7 +759,7 @@ function loadDates() {
 
 /**
  * Démarre une nouvelle session de pointage
- * Extrait les joueurs inscrits et en liste d'attente depuis le fichier Excel
+ * Extrait uniquement les inscrits avant le séparateur LISTE D'ATTENTE
  * Sauvegarde la session dans le stockage local
  */
 function startSession() {
@@ -773,30 +775,27 @@ function startSession() {
     const maxRow = range.e.r;
 
     const extractedAllParticipants = [];
-    let isWaitlist = false;
 
     // Parcourir toutes les lignes à partir de la ligne 4 (index 3)
     for (let r = 3; r <= maxRow; r++) {
+        const stopText = [0, 1, 2, 3].map(c => {
+            const cell = worksheet[XLSX.utils.encode_cell({c, r})];
+            return cell ? String(cell.v ?? '') : '';
+        }).join(' ').toLowerCase().replace(/[\u2018\u2019\u02bc]/g, "'").replace(/\s+/g, ' ').trim();
+        if (stopText.includes("liste d'attente")) break;
+
         const cellB = worksheet[XLSX.utils.encode_cell({c: 1, r: r})]; // Colonne B = Nom
         const cellC = worksheet[XLSX.utils.encode_cell({c: 2, r: r})]; // Colonne C = Prénom
-        const cellD = worksheet[XLSX.utils.encode_cell({c: 3, r: r})]; // Colonne D (détection liste d'attente)
 
         const nomValue = cellB ? cellB.v : undefined;
         const prenomValue = cellC ? cellC.v : undefined;
 
-        const checkText = (nomValue || '') + (prenomValue || '') + (cellD ? cellD.v : '');
-
-        // Détecter si on entre dans la zone "Liste d'attente"
-        if (String(checkText).toLowerCase().includes("liste d'attente")) {
-            isWaitlist = true;
-            continue;
-        }
         
         // Extraire le participant si la colonne NOM contient une valeur
         if (nomValue) { 
             const nom = String(nomValue).trim();
             const prenom = prenomValue ? String(prenomValue).trim() : '';
-            const statut = isWaitlist ? "Liste d'attente" : "Inscrit";
+            const statut = "Inscrit";
             
             extractedAllParticipants.push({
                 id: `P${String(r).padStart(3, '0')}`,
@@ -830,7 +829,7 @@ function startSession() {
     
     saveDataToStorage('badminton_session', activeSession);
     updateUI();
-    alert(`Session démarrée. ${players.length} inscrits et ${allParticipants.length - players.length} en attente trouvés.`);
+    alert(`Session démarrée. ${players.length} inscrits chargés. La liste d'attente a été ignorée.`);
     switchTab('participants');
 }
 
@@ -956,6 +955,10 @@ function downloadLocally(presences) {
     
     // Parcourir les lignes et marquer les présences avec 'V'
     for (let r = 3; r < data.length; r++) {
+        const stopText = [0, 1, 2, 3].map(c => String(data[r][c] ?? ''))
+            .join(' ').toLowerCase().replace(/[\u2018\u2019\u02bc]/g, "'").replace(/\s+/g, ' ').trim();
+        if (stopText.includes("liste d'attente")) break;
+
         const nom = data[r][1];
         const prenom = data[r][2];
         if (!nom || !prenom) continue;

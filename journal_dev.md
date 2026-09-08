@@ -37,7 +37,7 @@ Terminal 2 — frontend :
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Ouvrir `http://127.0.0.1:8000/260907_badminton.html` (pas un fichier `file://`).
+Ouvrir `http://127.0.0.1:8000/index.html?v=260908` (pas un fichier `file://`).
 Le frontend servi sur `localhost` ou `127.0.0.1` appelle `http://127.0.0.1:5000`.
 Sur GitHub Pages, il conserve `https://mrchabou.eu.pythonanywhere.com`.
 Le backend autorise les origines `http://127.0.0.1:8000`,
@@ -62,9 +62,15 @@ sont propres à chaque origine ; garder la même adresse pour les essais.
 Après un rechargement de page, recharger le planning et redémarrer la session :
 la restauration complète n'est pas corrigée dans cette étape.
 
-Les fichiers de travail sont `260907_badminton.html` et `260907_flask_app.py`.
-`En ligne/` reste inchangé : cette procédure ne déploie rien. Le `index.html`
-issu du dépôt Git de référence n'est pas le frontend de test local.
+`index.html` est la source frontend canonique du projet.
+- `main:index.html` est la version servie par GitHub Pages.
+- `dev/local-test-cycle:index.html` est la version de développement/test.
+- `260907_badminton.html` reste présent à titre transitoire ; il n'est plus la
+  source de vérité et ne doit pas remplacer `index.html`.
+- Le backend de travail reste `260907_flask_app.py` : Flask local en développement,
+  Flask sur PythonAnywhere en production.
+- Les fichiers datés et `En ligne/` existent toujours ; aucune suppression ni
+  modification du déploiement n'est effectuée.
 Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 
 ### Validation de cette étape
@@ -147,3 +153,29 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 - Périmètre du commit : fichiers de développement, dépendances, `.gitignore`
   et documentation, jusque-là non suivis. Classeurs, archives et copies de
   production restent hors du commit.
+
+## 08/09/2026 — Convergence vers la source frontend canonique
+
+- Décision : développer désormais dans `index.html` sur la branche dev, en
+  conservant `main:index.html` comme frontend servi par GitHub Pages.
+- Report limité des correctifs validés : URL backend local/prod, arrêt avant
+  LISTE D'ATTENTE en A:D dans le chargement et l'export local, message dynamique.
+- Recherche multi-résultats, pointage depuis Participants, compteurs et autres
+  fonctions de production conservés. Backend inchangé.
+- Fichier frontend daté transitoire et dossier `En ligne/` toujours présents.
+- Aucun traitement des essais, du tri ou des prénoms ; aucun refactor.
+- Validation manuelle de convergence confirmée par le pilote sur
+  `http://127.0.0.1:8000/index.html?v=260908` : Mercredi 20h00 à 21h45,
+  46 inscrits et liste d'attente ignorée ; recherche multi-résultats et sélection,
+  pointage/annulation depuis Participants, compteurs et journal validés.
+- Export validé manuellement : liste d'attente inchangée. Dans Network,
+  `http://127.0.0.1:5000/health` répond HTTP 200 OK.
+- Tests automatisés de convergence : code JS réel sous Node avec DOM et
+  utilitaires SheetJS simulés, cellules du classeur réel lues par openpyxl ;
+  30 onglets exercés, dont Mercredi 20h00 à 21h45 = 46 inscrits.
+- Recherche multi-résultats, sélection, pointage/annulation depuis Participants
+  et compteurs vérifiés ; URL backend vérifiée pour les trois hôtes.
+- Chargement/export local : 16 variantes de séparateur vérifiées. Client Flask :
+  health/CORS sur trois origines et POST sur 16 variantes, attente inchangée.
+- Comparaison du code : HTML/UI et fonctions hors des deux fonctions modifiées
+  et de la configuration backend inchangés. Aucun nouveau test navigateur.
