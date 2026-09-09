@@ -1,169 +1,139 @@
 # PRD — Application de Pointage Badminton
 
 **Auteur :** MrChaBou
-**Dernière mise à jour :** 2026-09-07
+**Dernière mise à jour :** 2026-09-08
 
----
+## État de référence avant fusion
 
-## 🎯 Objectif
+Ce document décrit le comportement actuel de `dev/local-test-cycle`, testée et
+poussée. Le frontend et le backend sont validés localement selon le pilote.
+`main` et PythonAnywhere ne sont pas encore mis à jour ; le déploiement et la
+validation en production restent à effectuer. L’audit documentaire ne réalise
+ni fusion, ni commit, ni push, ni déploiement.
 
-Mettre à disposition des joueurs et des organisateurs un outil simple de **pointage en ligne** qui :
+## Objectif et utilisateurs
 
-* Permet aux joueurs de marquer leur présence facilement.
-* Alimente automatiquement un **planning Excel existant** (par créneau et date) sans altérer son format ni sa mise en page.
-* Supprime la nécessité d’exporter manuellement des journaux : tout passe par l’intégration avec le planning.
+Permettre aux joueurs et organisateurs de pointer les présences sur mobile, puis
+aux administrateurs de télécharger le planning Excel complet mis à jour pour
+un créneau et une date. Le backend préserve les styles du classeur ; il travaille
+en mémoire et ne remplace pas le fichier source.
 
----
+## Import et sélection de session
 
-## 👥 Utilisateurs cibles
+- Charger le planning `.xlsx` officiel, choisir son onglet et sa date, puis
+  démarrer une session.
+- Lire les noms en B et les prénoms en C à partir de la ligne 4 ; ignorer les
+  lignes sans nom. Les IDs sont dérivés du numéro de ligne.
+- Arrêter la lecture avant « LISTE D’ATTENTE », détectée en A:D, y compris dans
+  une cellule fusionnée ancrée en A. Normaliser casse, apostrophes typographiques
+  et espaces insécables/multiples. Appliquer cette frontière aux deux exports.
+- Lire les dates numériques Excel dans les 10 premières lignes et 20 premières
+  colonnes. La conversion et l’affichage conservent le jour calendaire quel que
+  soit le fuseau horaire, pour les calendriers Excel 1900 et 1904 ; la fraction
+  horaire est ignorée. Les dates sont triées et le jour local courant est
+  présélectionné lorsqu’il existe dans le planning.
+- Limites de détection : série ramenée au calendrier 1900 strictement entre
+  40000 et 50000, année strictement entre 2000 et 2030. Les dates textuelles
+  ne sont pas reconnues.
 
-* **Joueurs** : marquer leur présence en quelques clics depuis un smartphone.
-* **Administrateurs (orga du club)** : gérer la liste des joueurs et mettre à jour le planning officiel.
+## Participants ESSAI par date
 
----
+Les marqueurs reconnus, après suppression des espaces de bord et conversion en
+majuscules, sont `ESSAI`, `ESSAI PRESENT` et `ESSAI ABSENT`.
 
-## ⚙️ Fonctionnalités principales
+Une ligne portant l’un de ces marqueurs dans une des colonnes de date détectées
+est une ligne d’essai. Elle est proposée uniquement si la cellule de la date
+sélectionnée porte elle aussi un de ces marqueurs. Une ligne sans marqueur sur
+les dates détectées est considérée comme inscrite. La liste d’attente reste exclue.
 
-### 1. Pointage joueur (UI simple et rapide)
+Les essais admissibles participent à la recherche, au pointage et aux compteurs.
+À l’export, une cellule cible portant un marqueur d’essai devient `ESSAI PRESENT`
+si la personne est pointée, sinon `ESSAI ABSENT`, dans les deux modes d’export.
+Ces marqueurs ne créent pas automatiquement des pointages dans le journal importé.
 
-* Recherche rapide par nom ou prénom (2-3 lettres mini).
-* Affichage d’une fiche joueur → coche “Présent” (case à cocher stylisée).
-* Confirmation visuelle immédiate (“✅ Présence enregistrée !”).
-* Réinitialisation automatique après quelques secondes pour enchaîner les pointages.
+## Interface et pointage
 
-### 2. Journal (consultation / gestion interne)
+- **Pointer** : recherche par nom ou prénom dès deux caractères, sans distinction
+  de casse ; sélection parmi plusieurs résultats, fiche joueur, pointage et
+  annulation avec retour visuel.
+- **Participants** : liste des inscrits et essais de la date, compteurs et
+  pointage/annulation depuis la liste.
+- **Journal** : consultation des présences de la session active avec heure.
+- **Admin** : chargement du planning, choix du créneau et de la date, démarrage
+  de session, statut backend, téléchargement et réinitialisation de l’application.
 
-* Liste chronologique des présences enregistrées.
-* Option pour effacer tout le journal.
-* **Note** : plus d’export Excel depuis le journal (fonction supprimée).
+Il n’existe plus de parcours de génération d’une colonne à coller. Le journal
+n’a pas d’export séparé ni de bouton d’effacement propre. La réinitialisation
+supprime session, participants et journal ; elle ne charge pas de joueurs par défaut.
 
-### 3. Admin (gestion avancée)
+## Persistance et reprise après F5
 
-#### a) Import des joueurs
+La session, les participants et le journal sont stockés dans `localStorage`,
+propre à l’origine du navigateur. Au chargement, la liste utilisée par la recherche
+est reconstruite depuis les participants sauvegardés : **aucun premier pointage
+n’est nécessaire**. `BUG-UI-SEARCH-DELAY` est corrigé pour cette restauration.
 
-* Import d’un fichier Excel contenant les colonnes **Nom** et **Prénom**.
-* Génération automatique d’IDs uniques.
-* Aperçu de la liste des joueurs importés.
-* Règle du 07/09/2026 : charger uniquement la première liste du créneau, depuis la ligne 4 jusqu'au séparateur « LISTE D'ATTENTE » exclu. Détecter ce texte en A:D en normalisant casse, apostrophes typographiques et espaces insécables/multiples ; ignorer les places sans nom.
-* Appliquer la même frontière aux écritures de présence des exports backend et local. La limitation existante du mode local concernant les styles demeure. Aucun traitement particulier des participants « essai » dans ce correctif.
-* Après mise à jour, recharger le planning et redémarrer la session pour renouveler la liste sauvegardée dans le navigateur.
+Le classeur et les octets du fichier Excel restent uniquement en mémoire. Après
+F5, la session et les pointages sont restaurés et la recherche est utilisable,
+mais l’export est désactivé avec un message demandant de recharger le planning
+source dans Admin **sans redémarrer la session**. Les deux fonctions d’export
+appliquent aussi ce contrôle. Le créneau, les coordonnées de la cellule de date
+et son libellé doivent être compatibles avec la session avant de réactiver l’export.
+Ce contrôle ne certifie pas l’identité complète du fichier source.
 
-#### b) Mise à jour du planning (nouvelle logique “colonne à coller”)
+## Export du planning complet
 
-* Import du fichier **planning officiel** (Excel multi-onglets, un onglet par créneau).
-* Lecture automatique des onglets → affichage dans un menu déroulant (“Créneau”).
-* Détection automatique des colonnes de date dans la ligne d’en-tête → affichage dans un menu déroulant (“Date”).
-* Génération d’un fichier Excel contenant **une seule colonne** (avec entête = date choisie, lignes = “✗” ou vide selon présence).
-* L’admin colle cette colonne directement dans l’onglet/date correspondants du planning → aucune mise en page ou formule n’est altérée.
+- Le frontend envoie le fichier source encodé en base64, le créneau, la colonne
+  cible et les présents de la session à `POST /update-planning`.
+- Flask/openpyxl renvoie le classeur complet : `V` pour un inscrit présent,
+  cellule vidée pour un absent, ou marqueur d’essai mis à jour selon la présence.
+  Les écritures sont limitées à la colonne sélectionnée avant la liste d’attente.
+- La préservation des styles, des fusions et des formules hors cible est assurée
+  par le parcours backend sur les classeurs validés ; les cellules de pointage
+  ciblées sont remplacées.
+- Si le backend est déclaré indisponible, un export SheetJS local est proposé
+  avec avertissement de perte des styles. L’effacement d’une ancienne présence
+  par `null` reste une limite signalée, sans correctif identifié.
+- Les deux exports ignorent les lignes sans nom ou sans prénom, alors que
+  l’import peut afficher une ligne avec un nom seul.
 
-#### c) Réinitialisation
+## Architecture et exploitation
 
-* Effacement complet des données (joueurs + journal).
-* Réinitialisation avec un set de joueurs par défaut.
+Frontend canonique : `index.html`, styles dans `css/app.css`, sans build.
+Scripts classiques chargés dans cet ordre :
 
----
+| Fichier | Responsabilité |
+| --- | --- |
+| `js/state.js` | Configuration backend, état partagé, stockage |
+| `js/ui.js` | Navigation, affichage et disponibilité de l’export |
+| `js/pointage.js` | Participants, recherche, pointage et annulation |
+| `js/planning.js` | Import, dates, essais, session et contrôle avant export |
+| `js/export.js` | Statut backend et exports |
+| `js/app.js` | Initialisation et événements |
 
-## 🖥️ Interface utilisateur
+Backend canonique : `flask_app.py`, Flask/openpyxl, dépendances fixées dans
+`requirements.txt`. Le stockage navigateur permet la reprise du pointage ;
+un backend est nécessaire pour exporter avec les styles.
 
-### Onglet **Pointage**
+En local, frontend HTTP sur `127.0.0.1:8000`, backend sur `127.0.0.1:5000`.
+`BACKEND_URL`, dans `js/state.js`, choisit le backend local sur `localhost` ou
+`127.0.0.1`, sinon `https://mrchabou.eu.pythonanywhere.com`.
+CORS autorise les deux origines locales sur le port 8000 et
+`https://mrchabou.github.io`. Tailwind et SheetJS sont chargés par CDN ; une
+connexion Internet reste nécessaire. Commandes : [README](readme.md#cycle-de-développement-et-test-local).
 
-* Champ recherche joueur.
-* Carte joueur + case à cocher présence.
-* Message de succès.
-* Footer : *“Dev par MrChaBou avec ❤️”*.
+GitHub Pages sert la version de `main`. Publier ensemble le HTML, le CSS et les
+six scripts après fusion, puis mettre à jour et recharger PythonAnywhere.
+Les archives `old_bad/` et `En ligne/` restent locales, ignorées par Git.
 
-### Onglet **Journal**
+## Validation et points restant à suivre
 
-* Liste des présences (nom, prénom, date/heure).
-* Bouton “Effacer le journal”.
-* Footer : *“Dev par MrChaBou avec ❤️”*.
+La validation locale frontend/backend et le push de la branche sont confirmés
+par le pilote. L’historique Git contient les correctifs de dates, le refactor,
+la restauration de recherche, les essais par date et le contrôle après F5.
+Cet audit relit le code et la documentation ; il ne rejoue pas les tests métier.
 
-### Onglet **Admin**
-
-* **Import joueurs** : bouton choisir fichier + aperçu.
-* **Mise à jour du planning** :
-
-  * Bouton importer fichier planning.
-  * Bouton “Lire les créneaux” → liste des onglets.
-  * Menu déroulant “Créneau (onglet)”.
-  * Menu déroulant “Date”.
-  * Bouton “Générer la colonne ✗/✓ à coller”.
-  * Bouton “Télécharger la colonne” (active après génération).
-* **Réinitialisation** : bouton rouge “Tout réinitialiser”.
-* Footer : *“Dev par MrChaBou avec ❤️”*.
-
----
-
-## 🔄 Flux d’utilisation admin (mise à jour planning)
-
-1. Admin → onglet **Admin**.
-2. Import du **fichier planning officiel**.
-3. Cliquer sur **“Lire les créneaux”** → affichage des onglets (créneaux).
-4. Choisir un **créneau/onglet**.
-5. Choisir une **date** (dans les entêtes de la ligne planning).
-6. Cliquer sur **“Générer la colonne”**.
-7. Télécharger le fichier colonne générée.
-8. Dans Excel → coller la colonne dans la colonne de la date sélectionnée (du bon onglet).
-
----
-
-## 🚫 Ce qui a été supprimé
-
-* **Export du journal des présences** en Excel → remplacé par l’intégration directe avec le planning via colonnes générées.
-
----
-
-## ✅ Contraintes et exigences
-
-* Ne jamais modifier la mise en page, formules, couleurs ou bordures du planning Excel officiel.
-* Gérer correctement les **noms avec accents / majuscules / espaces** (normalisation).
-* Les entêtes de colonnes de dates doivent être de **vraies dates Excel** ou du texte reconnu (“05-sept”, “12/09/2025”, etc.).
-* Compatibilité mobile (iOS Safari, Android Chrome).
-* Stockage local (localStorage) suffisant, pas besoin de serveur externe.
-
----
-
-
-## Extension du 07/09/2026 — Cycle de dev/test local
-
-Cette extension décrit uniquement le cycle local ; les fonctionnalités métier
-historiques ci-dessus ne sont pas révisées à cette étape. Pour ce cycle, un
-backend Flask local est nécessaire à l'export avec openpyxl, malgré la mention
-historique « pas besoin de serveur externe ».
-
-`index.html` est la source frontend canonique du projet.
-Structure du frontend sans étape de build :
-
-- `index.html` : structure HTML et gestionnaires inline existants.
-- `css/app.css` : styles personnalisés extraits sans modification.
-- `js/app.js` : script classique, chargé en fin de page ; fonctions globales
-  conservées pour les gestionnaires `onclick`/`onchange`.
-
-Les chemins relatifs `css/app.css` et `js/app.js` fonctionnent également sous
-`/bad_pointage/`. Publier les trois fichiers ensemble. Les dépendances Tailwind
-et SheetJS restent chargées par CDN dans leur ordre initial.
-
-
-- `main:index.html` est la version servie par GitHub Pages.
-- `dev/local-test-cycle:index.html` est la version de développement/test.
-- Frontend canonique : `index.html` ; backend canonique actif : `flask_app.py`.
-- Le backend utilise Flask local en développement et Flask/PythonAnywhere en production.
-- Les fichiers datés ne sont plus des sources de vérité. Le frontend daté est
-  archivé dans `old_bad/260907_badminton.html`, hors du contenu suivi de la branche.
-- `old_bad/` sert uniquement d'archive locale ignorée par Git ; `En ligne/` reste
-  également local et ignoré. Aucun changement du déploiement.
-- Frontend HTTP sur `127.0.0.1:8000` ; backend sur `127.0.0.1:5000`.
-- Sur `localhost` ou `127.0.0.1`, le frontend sélectionne le backend local ;
-  sur GitHub Pages, il conserve `https://mrchabou.eu.pythonanywhere.com`.
-- CORS : autoriser `http://127.0.0.1:8000`, `http://localhost:8000` et
-  `https://mrchabou.github.io`.
-- Installation et commandes exactes : section « Cycle de développement et test
-  local » du README (`readme.md`) et de `journal_dev.md`.
-- Dépendances backend déclarées dans `requirements.txt` ; CDN frontend
-  nécessitant une connexion Internet.
-- Critères de validation : GET `/health` en HTTP 200, frontend servi en HTTP,
-  appels vers le backend local, CORS autorisé pour les trois origines et POST
-  `/update-planning` renvoyant un classeur modifié en mémoire.
-- `En ligne/` et le comportement métier restent inchangés ; aucun déploiement.
-- Refactor, tests de non-régression durables et bugs Excel/tri/prénom restent
-  hors périmètre. La restauration complète après rechargement reste une limite.
+La validation en production reste à effectuer après déploiement : `/health`,
+export avec styles, dates, liste d’attente, essais et reprise après F5.
+Les signalements historiques sur le tri et les prénoms n’ont pas de clôture
+explicite documentée ; leur statut reste à confirmer, sans les déclarer bugs actifs.

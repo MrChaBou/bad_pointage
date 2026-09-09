@@ -1,8 +1,13 @@
 # 🏸 Application de Pointage Badminton
 
-Une application web 100% mobile pour simplifier le pointage des présences lors des séances de badminton et automatiser la mise à jour des plannings Excel, **tout en préservant intégralement le formatage et les styles du fichier d'origine**.
+Une application web 100% mobile pour simplifier le pointage des présences lors des séances de badminton et automatiser la mise à jour des plannings Excel, **avec préservation des styles via le backend Python**.
 
-https://mrchabou.github.io/bad_pointage/
+Production : https://mrchabou.github.io/bad_pointage/
+
+**État au 08/09/2026 avant fusion :** `dev/local-test-cycle` testée et poussée ;
+frontend et backend validés localement selon le pilote. `main` et PythonAnywhere
+ne sont pas encore mis à jour. Les fonctionnalités ci-dessous décrivent la branche
+de développement ; leur validation en production reste à effectuer.
 
 
 ---
@@ -19,9 +24,9 @@ Cette application adopte une approche hybride pour résoudre ce problème :
 
 1.  **Un Frontend Léger et Mobile (`index.html`) :** Une interface simple et tactile, utilisable sur n'importe quel smartphone via un navigateur. Elle gère le chargement du fichier, la sélection de la session et l'interface de pointage.
 
-2.  **Un Backend Puissant en Python (`flask_app.py`) :** Un micro-service hébergé gratuitement sur PythonAnywhere. Lorsque l'utilisateur exporte les présences, le frontend envoie le fichier Excel original et la liste des présents au backend. Le backend utilise la bibliothèque **Openpyxl**, qui est capable de modifier le contenu des cellules **sans jamais altérer les styles, les formules ou les cellules fusionnées**.
+2.  **Un Backend Puissant en Python (`flask_app.py`) :** Un micro-service hébergé gratuitement sur PythonAnywhere. Lorsque l'utilisateur exporte les présences, le frontend envoie le fichier Excel original et la liste des présents au backend. Le backend utilise la bibliothèque **Openpyxl**, qui est capable de modifier le contenu des cellules **en préservant les styles et les éléments hors des cellules de pointage traitées**.
 
-Cette architecture garantit une expérience utilisateur fluide tout en produisant un fichier Excel final parfait.
+Le classeur est traité en mémoire et téléchargé ; le fichier source reste inchangé.
 
 ---
 
@@ -29,20 +34,22 @@ Cette architecture garantit une expérience utilisateur fluide tout en produisan
 
 -   **📱 Interface 100% Mobile :** Gros boutons, textes lisibles, actions tactiles et prévention du zoom pour une utilisation optimale sur le terrain.
 -   **⚙️ Gestion de Session Simplifiée :**
-    -   Chargez n'importe quel planning Excel.
+    -   Chargez un planning `.xlsx` compatible (nom en B, prénom en C, participants dès la ligne 4).
     -   L'application détecte automatiquement les onglets (créneaux) et les dates.
     -   La date du jour est présélectionnée pour un démarrage rapide.
 -   **👥 Extraction Intelligente des Joueurs :**
-    -   Lit uniquement la première liste d'**inscrits**, depuis les colonnes B et C du fichier.
+    -   Lit la première liste : **inscrits et essais admissibles pour la date choisie**, depuis les colonnes B et C du fichier.
     -   S'arrête au séparateur « LISTE D'ATTENTE » détecté en A:D, y compris dans une cellule fusionnée ancrée en A. La détection normalise la casse, les apostrophes typographiques et les espaces insécables/multiples.
     -   Les exports backend et local arrêtent également leurs écritures au séparateur. Le mode local conserve sa limitation de préservation des styles.
 -   **👆 Pointage Tactile et Intuitif :**
     -   Recherche rapide par nom/prénom.
     -   Un énorme bouton pour pointer/annuler.
     -   **Annulation possible** pendant une courte période après le pointage.
--   **🎨 Préservation Parfaite des Styles :** Grâce au backend Python/Openpyxl, le fichier Excel exporté est identique à l'original, avec seulement les 'V' de présence ajoutés.
--   **🌐 Fallback Automatique :** Si le serveur backend est indisponible, l'application peut toujours effectuer une mise à jour locale du fichier (en avertissant l'utilisateur que les styles seront perdus).
--   **💾 Persistance des Données :** La session active et le journal des présences sont sauvegardés dans le navigateur, vous pouvez donc fermer et rouvrir la page sans perdre votre travail.
+-   **🗓️ Dates Excel :** Les jours calendaires sont lus et affichés indépendamment du fuseau horaire, avec prise en compte des calendriers Excel 1900 et 1904.
+-   **🧑 Participants ESSAI :** Les marqueurs `ESSAI`, `ESSAI PRESENT` et `ESSAI ABSENT` identifient les essais. Une personne ayant un marqueur sur une date détectée n’est proposée que si la date sélectionnée porte aussi un de ces marqueurs. Les deux exports écrivent `ESSAI PRESENT` ou `ESSAI ABSENT` dans la cellule d’essai de cette date.
+-   **🎨 Export avec styles :** Le backend Python/Openpyxl renvoie le classeur complet ; il écrit `V` pour les inscrits présents et vide les cellules des absents dans la colonne sélectionnée, avant la liste d’attente.
+-   **🌐 Export local de secours :** Si le serveur backend est indisponible, l'application peut toujours effectuer une mise à jour locale du fichier (en avertissant l'utilisateur que les styles seront perdus).
+-   **💾 Persistance des Données :** La session, les participants et les pointages sont sauvegardés dans le navigateur. Après F5, la recherche fonctionne immédiatement sans premier pointage préalable. Le fichier Excel source, conservé uniquement en mémoire, doit être rechargé avant export ; le bouton reste désactivé avec un message explicite jusque-là.
 
 ---
 
@@ -56,7 +63,7 @@ L'utilisation de l'application est conçue pour être la plus simple possible :
     -   Cliquez sur "Démarrer la session".
 
 2.  **Onglet "Participants" (Optionnel) :**
-    -   Visualisez uniquement les inscrits de la première liste du créneau sélectionné.
+    -   Visualisez les inscrits et les essais de la date sélectionnée ; pointez ou annulez depuis cette liste.
 
 3.  **Onglet "Pointer" :**
     -   L'application est prête à recevoir les joueurs.
@@ -64,8 +71,9 @@ L'utilisation de l'application est conçue pour être la plus simple possible :
     -   Touchez le grand bouton pour marquer sa présence.
 
 4.  **Onglet "Admin" (en fin de session) :**
+    -   Après F5, rechargez le planning source dans Admin **sans redémarrer la session** : les pointages sont conservés. L’export vérifie la présence du créneau et la compatibilité de la cellule de date avec la session restaurée.
     -   Cliquez sur "Télécharger le planning mis à jour".
-    -   Récupérez le fichier Excel parfaitement formaté avec les présences du jour.
+    -   Récupérez le classeur mis à jour pour la date de session, avec les styles préservés via le backend.
 
 ---
 
@@ -73,7 +81,7 @@ L'utilisation de l'application est conçue pour être la plus simple possible :
 
 -   **Frontend :** HTML5, Tailwind CSS, JavaScript (ES6+)
 -   **Librairie Excel (Frontend) :** [SheetJS/xlsx](https://sheetjs.com/)
--   **Backend :** Python 3.10
+-   **Backend :** Python (validation locale initiale : 3.12.3)
 -   **Framework Backend :** Flask
 -   **Librairie Excel (Backend) :** [Openpyxl](https://openpyxl.readthedocs.io/)
 -   **Hébergement :** GitHub Pages (Frontend) & PythonAnywhere (Backend)
@@ -145,20 +153,28 @@ il reçoit et renvoie le classeur en mémoire. Arrêter les serveurs avec Ctrl+C
 Les dépendances backend sont dans `requirements.txt`. Tailwind et SheetJS sont
 chargés par CDN : une connexion Internet reste nécessaire. Les données navigateur
 sont propres à chaque origine ; garder la même adresse pour les essais.
-Après un rechargement de page, recharger le planning et redémarrer la session :
-la restauration complète n'est pas corrigée dans cette étape.
+Après F5, la session, les participants, la recherche et les pointages sont restaurés.
+Recharger le fichier source dans Admin **sans redémarrer la session** pour exporter.
+Les exports backend et local sont bloqués tant que le classeur manque ou que
+la cible de session est incompatible.
 
 `index.html` est la source frontend canonique du projet.
 Structure du frontend sans étape de build :
 
 - `index.html` : structure HTML et gestionnaires inline existants.
 - `css/app.css` : styles personnalisés extraits sans modification.
-- `js/app.js` : script classique, chargé en fin de page ; fonctions globales
-  conservées pour les gestionnaires `onclick`/`onchange`.
+- `js/state.js` : configuration backend, état partagé et stockage navigateur.
+- `js/ui.js` : navigation, affichage et disponibilité de l’export.
+- `js/pointage.js` : participants, recherche, pointage et annulation.
+- `js/planning.js` : import, dates, essais par date, session et contrôle avant export.
+- `js/export.js` : disponibilité backend et exports backend/local.
+- `js/app.js` : initialisation et branchement des événements.
 
-Les chemins relatifs `css/app.css` et `js/app.js` fonctionnent également sous
-`/bad_pointage/`. Publier les trois fichiers ensemble. Les dépendances Tailwind
-et SheetJS restent chargées par CDN dans leur ordre initial.
+Les scripts classiques sont chargés en fin de page dans l’ordre : `state`, `ui`,
+`pointage`, `planning`, `export`, `app`. Les fonctions globales restent accessibles
+aux gestionnaires inline. Publier `index.html`, `css/app.css` et les six fichiers
+JS ensemble, en conservant les chemins relatifs utilisables sous `/bad_pointage/`.
+Tailwind et SheetJS sont chargés par CDN.
 
 - `main:index.html` est la version servie par GitHub Pages.
 - `dev/local-test-cycle:index.html` est la version de développement/test.
@@ -168,41 +184,47 @@ et SheetJS restent chargées par CDN dans leur ordre initial.
   archivé dans `old_bad/260907_badminton.html`, hors du contenu suivi de la branche.
 - `old_bad/` sert uniquement d'archive locale ignorée par Git ; `En ligne/` reste
   également local et ignoré. Aucun changement du déploiement.
-Le correctif du 07/09/2026 exclut la liste d'attente du chargement et des écritures de présence.
-Après sa mise en place, recharger le planning et redémarrer la session pour remplacer
-la liste conservée dans le navigateur. Aucun refactor ni traitement des essais, du tri
-ou des prénoms n'est inclus.
+Les anciens états navigateur créés avant les correctifs de sélection des participants
+peuvent nécessiter un nouvel import et un démarrage de session pour reconstruire la
+liste. Cette migration se distingue d’un simple F5 dans la version actuelle.
+
+### Limites actuelles
+
+- Le mode local ne préserve pas les styles ; l’effacement d’une ancienne présence
+  par écriture de `null` a été signalé comme non effectif dans le journal et n’a
+  pas de correctif identifié. Privilégier le backend pour l’export complet.
+- L’import peut afficher une ligne avec un nom seul, mais les deux exports ignorent
+  les lignes sans nom ou sans prénom.
+- Les dates reconnues sont numériques, dans les 10 premières lignes et 20 premières
+  colonnes, avec une plage de séries 1900 strictement entre 40000 et 50000 et une
+  année inférieure à 2030. Les dates stockées en texte ne sont pas prises en charge.
 
 ---
 
 ## 🔧 Guide de Déploiement
 
-Pour déployer votre propre version de l'application :
+Ces étapes restent à effectuer après revue et fusion vers `main` ; aucun déploiement
+n’est réalisé par cet audit documentaire.
 
-### 1. Backend (sur PythonAnywhere)
+### 1. Backend (PythonAnywhere)
 
-1.  Créez un compte gratuit sur [PythonAnywhere](https://www.pythonanywhere.com) (choisissez le serveur le plus proche, ex: Europe).
-2.  Dans l'onglet **"Web"**, créez une nouvelle "Web App" avec le framework **Flask** et **Python 3.10**.
-3.  Dans "Virtualenv", entrez un chemin (ex: `/home/VOTRE_NOM/.venv`) et laissez PythonAnywhere créer l'environnement virtuel pour Python 3.10.
-4.  **Rechargez** l'application web pour l'activer.
-5.  Ouvrez une console **depuis le lien du virtualenv** sur l'onglet "Web". Dans cette console, installez les dépendances :
-    ```bash
-    pip install flask flask-cors openpyxl
-    ```
-6.  Dans l'onglet **"Files"**, naviguez et ouvrez le fichier `flask_app.py`. Collez-y le contenu de votre fichier `flask_app.py`.
-7.  **IMPORTANT (CORS) :** Dans `flask_app.py`, modifiez la ligne `CORS(app, origins='*')`. Pour la production, remplacez `*` par l'URL de votre page GitHub (ex: `'https://MrChaBou.github.io'`).
-8.  Retournez sur l'onglet **"Web"** et cliquez sur **"Reload"**. Votre backend est en ligne !
+1. Mettre à jour le backend déployé avec le fichier canonique `flask_app.py`.
+2. Installer les dépendances de `requirements.txt` dans l’environnement de la Web App.
+3. Vérifier que la configuration WSGI charge l’objet `app` de `flask_app`.
+4. Vérifier la liste `CORS(app, origins=[...])` : l’origine de production actuelle
+   est `https://mrchabou.github.io` ; adapter cette liste pour un autre hébergement.
+5. Recharger la Web App puis contrôler `/health` et un export avec styles et essais.
 
-### 2. Frontend (sur GitHub Pages)
+### 2. Frontend (GitHub Pages)
 
-1.  Créez un nouveau dépôt sur GitHub.
-2.  Ajoutez `index.html`, `css/app.css` et `js/app.js` au dépôt.
-3.  **IMPORTANT :** Dans `js/app.js`, modifiez la constante `BACKEND_URL` pour qu'elle corresponde à votre URL PythonAnywhere :
-    ```javascript
-    const BACKEND_URL = 'https://VOTRE_NOM.eu.pythonanywhere.com';
-    ```
-4.  Dans les paramètres de votre dépôt GitHub (`Settings` -> `Pages`), activez GitHub Pages pour la branche `main`.
-5.  Votre application sera accessible à l'adresse `https://VOTRE_NOM_GITHUB.github.io/NOM_DU_DEPOT/index.html`.
+1. Après fusion autorisée, publier depuis `main` le HTML, le CSS et les six fichiers
+   JavaScript décrits ci-dessus.
+2. La constante `BACKEND_URL` se trouve dans `js/state.js` : elle sélectionne Flask
+   local sur `localhost`/`127.0.0.1`, et PythonAnywhere sur les autres hôtes.
+   Adapter l’URL de production dans ce fichier pour un autre déploiement.
+3. Vérifier en production le chargement des ressources, les dates, l’exclusion de
+   LISTE D’ATTENTE, les essais par date, la recherche après F5, le blocage de
+   l’export puis sa reprise après rechargement du fichier source.
 
 ---
 ## 💡 Évolutions Possibles

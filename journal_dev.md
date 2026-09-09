@@ -1,5 +1,46 @@
 # Journal de développement — Bad Pointage
 
+## 08/09/2026 — État actuel avant fusion vers main
+
+- Branche `dev/local-test-cycle` testée et poussée ; frontend et backend validés
+  localement selon le pilote. À l’ouverture de cet audit, arbre propre et HEAD
+  synchronisé avec la référence locale `origin/dev/local-test-cycle` (`e1669d2`).
+- `main` et PythonAnywhere ne sont pas encore mis à jour. Le déploiement et la
+  validation en production restent à effectuer.
+- Sources canoniques : `index.html` et `flask_app.py`. CSS dans `css/app.css` ;
+  scripts classiques dans l’ordre `js/state.js`, `js/ui.js`, `js/pointage.js`,
+  `js/planning.js`, `js/export.js`, `js/app.js` (état, UI, pointage, planning,
+  export, initialisation).
+- `f67b112` : dates Excel corrigées indépendamment du fuseau horaire, avec
+  conversion calendaire et affichage UTC, calendriers 1900/1904 pris en compte.
+- `d47d043` : JavaScript réparti par responsabilité dans les six fichiers.
+- `594d82d` : recherche restaurée après F5 par reconstruction de `players`
+  depuis les participants sauvegardés. Aucun premier pointage nécessaire.
+- `72a25fd` : essais par date. Les marqueurs `ESSAI`, `ESSAI PRESENT` et
+  `ESSAI ABSENT` identifient les essais ; seuls ceux admissibles à la date
+  sélectionnée sont proposés. Les deux exports écrivent `ESSAI PRESENT` ou
+  `ESSAI ABSENT` dans la cellule d’essai cible. LISTE D’ATTENTE reste exclue.
+- `e1669d2` : après F5, session, participants et pointages restaurés ; fichier
+  Excel source à recharger dans Admin **sans redémarrer la session**. Export
+  désactivé avec message explicite et contrôlé dans les deux parcours tant que
+  le fichier manque ou que la cible de session est incompatible.
+- Audit documentaire : README et PRD alignés sur ce fonctionnement ; ancienne
+  description de BUG-UI-SEARCH-DELAY remplacée par son état corrigé. Relecture
+  du code et de l’historique, sans nouvelle exécution des tests métier.
+- Limites conservées : styles perdus et effacement par `null` signalé comme
+  non effectif dans l’export local ; lignes sans prénom affichables à l’import
+  mais ignorées par les exports. Dates textuelles non reconnues et détection
+  limitée à la zone/plage décrite dans le PRD. Le contrôle avant export vérifie
+  la cible de session, pas l’identité complète du fichier rechargé.
+- Tri/prénoms : signalements historiques sans clôture explicite ; statut à
+  confirmer, sans les qualifier de bugs actifs sur cette seule base.
+- Cette intervention modifie uniquement `readme.md`, `PRD_MAJ.md` et
+  `journal_dev.md` ; aucun code, commit, push ou changement de `main`.
+
+Les sections suivantes conservent l’historique de chaque étape. Les mentions
+« hors périmètre », « aucun refactor » ou « aucun push » décrivent uniquement
+l’étape passée ; l’état actuel de référence est celui présenté ci-dessus.
+
 ## Architecture et périmètre
 
 - Frontend HTML/JavaScript : lecture du planning avec SheetJS, sélection de
@@ -81,8 +122,9 @@ il reçoit et renvoie le classeur en mémoire. Arrêter les serveurs avec Ctrl+C
 Les dépendances backend sont dans `requirements.txt`. Tailwind et SheetJS sont
 chargés par CDN : une connexion Internet reste nécessaire. Les données navigateur
 sont propres à chaque origine ; garder la même adresse pour les essais.
-Après un rechargement de page, recharger le planning et redémarrer la session :
-la restauration complète n'est pas corrigée dans cette étape.
+Consigne actuelle après F5 : la session et les pointages sont restaurés. Recharger
+le planning source dans Admin sans redémarrer la session avant d’exporter.
+La limite de restauration observée au début du cycle a depuis été corrigée.
 
 `index.html` est la source frontend canonique du projet.
 - `main:index.html` est la version servie par GitHub Pages.
@@ -224,26 +266,18 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
   à la racine et sous `/bad_pointage/`. Serveur arrêté après vérification.
 - `index.html` passe de 1 011 lignes / 44 653 octets à 162 lignes / 10 036 octets.
 
-## Anomalie connue — BUG-UI-SEARCH-DELAY
+## BUG-UI-SEARCH-DELAY — corrigé localement le 08/09/2026
 
-- **Contexte :** observation manuelle du pilote après le démarrage d'une session,
-  dans l'onglet `Pointer`.
-- **Symptôme précisé :** le champ « Recherchez votre nom » reste indisponible
-  tant qu'aucun participant n'a été pointé depuis la liste chargée. Il devient
-  utilisable immédiatement après le premier pointage depuis cette liste.
-  Cette observation remplace la description initiale d'un simple délai de
-  quelques secondes ; aucun déblocage par le seul écoulement du temps n'est établi.
-- **Impact utilisateur :** la recherche ne permet pas d'effectuer le premier
-  pointage de la session ; le pilote doit d'abord pointer depuis la liste.
-- **Séquence observée :** charger un planning, démarrer une session, ouvrir
-  `Pointer` et constater l'indisponibilité du champ ; pointer un participant
-  depuis la liste chargée, puis revenir à `Pointer` : le champ est immédiatement
-  utilisable.
-- **État :** non analysé / non corrigé ; comportement précisé par le pilote lors
-  de la validation manuelle de la normalisation. Pas de reproduction par l'agent.
-- **Cause :** indéterminée ; le premier pointage est le déclencheur observé du
-  déblocage, sans diagnostic technique établi. Aucun correctif ni changement
-  de logique appliqué.
+- Le signalement initial associait le déblocage de la recherche à un premier
+  pointage depuis Participants. Cette interprétation est obsolète et ne doit
+  plus servir de consigne utilisateur.
+- Le correctif `594d82d` reconstruit `players` lors de la restauration du stockage
+  depuis `allParticipants` ; les inscrits et, depuis `72a25fd`, les essais
+  admissibles sont disponibles pour la recherche après F5.
+- État actuel : recherche restaurée, aucun premier pointage préalable requis.
+  Validation locale confirmée par le pilote ; déploiement en production à venir.
+- Le rechargement du fichier Excel avant export est une exigence distincte :
+  le fichier n’est pas persisté dans le navigateur.
 
 ## Normalisation du backend et archivage du frontend daté
 
@@ -258,7 +292,8 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
 - Validation manuelle confirmée par le pilote : `/health` HTTP 200, pointage et
   mise à jour Excel fonctionnels, export avec mise en forme préservée et liste
   d’attente correctement exclue.
-- Commit et push non effectués ; autorisation de commit toujours attendue.
+- À cette étape, commit et push n’étaient pas encore effectués. La normalisation
+  a depuis été intégrée dans `9d41420` et poussée avec la branche dev.
 - Vérifications répétées à la reprise du 08/09/2026, avec comparaison à
   `f16e451` : backend identique octet pour octet à sa
   version datée ; archive frontend identique à l'original ; index/CSS/JS inchangés.
