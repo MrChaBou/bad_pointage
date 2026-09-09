@@ -1,12 +1,27 @@
 # Journal de développement — Bad Pointage
 
-## 08/09/2026 — État actuel avant fusion vers main
+## 09/09/2026 — Production déployée et validée
+
+- Déploiement terminé et validation manuelle confirmée par le pilote.
+- `main` fast-forwardée jusqu’au commit `29337bb`, puis poussée sur GitHub ;
+  GitHub Pages sert la nouvelle version.
+- `flask_app.py` mis à jour sur PythonAnywhere, puis Web App rechargée.
+- Frontend chargé sans erreur ; backend disponible ; `/health` répond HTTP 200
+  avec `{"status":"ok"}`.
+- Export normal avec `V` dans la bonne colonne ; `ESSAI PRESENT` et `ESSAI ABSENT` validés.
+- Après F5 : session et recherche restaurées ; export bloqué jusqu’au rechargement
+  du planning, puis réactivé sans perte des pointages.
+- LISTE D’ATTENTE exclue : 46 participants sur le cas Mercredi 20H–21H45.
+- Mise à jour documentaire limitée à `readme.md`, `PRD_MAJ.md` et `journal_dev.md`,
+  sur la base de cette confirmation ; aucun code modifié, aucun commit ni push.
+
+## 08/09/2026 — État avant fusion vers main
 
 - Branche `dev/local-test-cycle` testée et poussée ; frontend et backend validés
   localement selon le pilote. À l’ouverture de cet audit, arbre propre et HEAD
   synchronisé avec la référence locale `origin/dev/local-test-cycle` (`e1669d2`).
-- `main` et PythonAnywhere ne sont pas encore mis à jour. Le déploiement et la
-  validation en production restent à effectuer.
+- À cette étape, `main` et PythonAnywhere n’étaient pas encore mis à jour ;
+  le déploiement et la validation en production restaient à effectuer.
 - Sources canoniques : `index.html` et `flask_app.py`. CSS dans `css/app.css` ;
   scripts classiques dans l’ordre `js/state.js`, `js/ui.js`, `js/pointage.js`,
   `js/planning.js`, `js/export.js`, `js/app.js` (état, UI, pointage, planning,
@@ -275,7 +290,8 @@ Aucun refactor ni correctif Excel/tri/prénom ne fait partie de cette étape.
   depuis `allParticipants` ; les inscrits et, depuis `72a25fd`, les essais
   admissibles sont disponibles pour la recherche après F5.
 - État actuel : recherche restaurée, aucun premier pointage préalable requis.
-  Validation locale confirmée par le pilote ; déploiement en production à venir.
+  Validation locale puis validation en production confirmées par le pilote
+  (voir l’entrée du 09/09/2026).
 - Le rechargement du fichier Excel avant export est une exigence distincte :
   le fichier n’est pas persisté dans le navigateur.
 

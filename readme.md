@@ -4,10 +4,10 @@ Une application web 100% mobile pour simplifier le pointage des présences lors 
 
 Production : https://mrchabou.github.io/bad_pointage/
 
-**État au 08/09/2026 avant fusion :** `dev/local-test-cycle` testée et poussée ;
-frontend et backend validés localement selon le pilote. `main` et PythonAnywhere
-ne sont pas encore mis à jour. Les fonctionnalités ci-dessous décrivent la branche
-de développement ; leur validation en production reste à effectuer.
+**État au 09/09/2026 : production déployée et validée manuellement par le pilote.**
+`main` a été fast-forwardée jusqu’à `29337bb`, puis poussée sur GitHub ; GitHub Pages
+sert la nouvelle version. `flask_app.py` a été mis à jour sur PythonAnywhere et
+la Web App rechargée. `/health` répond HTTP 200 avec `{"status":"ok"}`.
 
 
 ---
@@ -203,8 +203,14 @@ liste. Cette migration se distingue d’un simple F5 dans la version actuelle.
 
 ## 🔧 Guide de Déploiement
 
-Ces étapes restent à effectuer après revue et fusion vers `main` ; aucun déploiement
-n’est réalisé par cet audit documentaire.
+Le déploiement est effectué et validé en production. Les étapes ci-dessous
+restent la procédure de référence pour les prochains déploiements.
+
+Validation manuelle confirmée par le pilote : frontend chargé sans erreur, backend
+disponible, export normal avec `V` dans la bonne colonne, `ESSAI PRESENT` et
+`ESSAI ABSENT`. Après F5, session et recherche restaurées, export bloqué jusqu’au
+rechargement du planning puis réactivé sans perte des pointages. LISTE D’ATTENTE
+exclue : 46 participants sur le cas Mercredi 20H–21H45.
 
 ### 1. Backend (PythonAnywhere)
 

@@ -1,15 +1,14 @@
 # PRD — Application de Pointage Badminton
 
 **Auteur :** MrChaBou
-**Dernière mise à jour :** 2026-09-08
+**Dernière mise à jour :** 2026-09-09
 
-## État de référence avant fusion
+## État de référence en production
 
-Ce document décrit le comportement actuel de `dev/local-test-cycle`, testée et
-poussée. Le frontend et le backend sont validés localement selon le pilote.
-`main` et PythonAnywhere ne sont pas encore mis à jour ; le déploiement et la
-validation en production restent à effectuer. L’audit documentaire ne réalise
-ni fusion, ni commit, ni push, ni déploiement.
+Le déploiement est effectué et validé manuellement par le pilote. `main` a été
+fast-forwardée jusqu’à `29337bb`, puis poussée sur GitHub. GitHub Pages sert la
+nouvelle version ; `flask_app.py` a été mis à jour sur PythonAnywhere et la Web App
+rechargée. Ce document décrit désormais la version déployée en production.
 
 ## Objectif et utilisateurs
 
@@ -122,8 +121,9 @@ CORS autorise les deux origines locales sur le port 8000 et
 `https://mrchabou.github.io`. Tailwind et SheetJS sont chargés par CDN ; une
 connexion Internet reste nécessaire. Commandes : [README](readme.md#cycle-de-développement-et-test-local).
 
-GitHub Pages sert la version de `main`. Publier ensemble le HTML, le CSS et les
-six scripts après fusion, puis mettre à jour et recharger PythonAnywhere.
+GitHub Pages sert la version de `main` déployée au commit `29337bb`. Pour les
+prochains déploiements, publier ensemble le HTML, le CSS et les six scripts après
+fusion, puis mettre à jour et recharger PythonAnywhere.
 Les archives `old_bad/` et `En ligne/` restent locales, ignorées par Git.
 
 ## Validation et points restant à suivre
@@ -133,7 +133,14 @@ par le pilote. L’historique Git contient les correctifs de dates, le refactor,
 la restauration de recherche, les essais par date et le contrôle après F5.
 Cet audit relit le code et la documentation ; il ne rejoue pas les tests métier.
 
-La validation en production reste à effectuer après déploiement : `/health`,
-export avec styles, dates, liste d’attente, essais et reprise après F5.
+Validation manuelle en production confirmée par le pilote :
+
+- Frontend chargé sans erreur ; backend disponible, `/health` HTTP 200 avec
+  `{"status":"ok"}`.
+- Export normal : `V` dans la bonne colonne ; `ESSAI PRESENT` et `ESSAI ABSENT` validés.
+- Après F5 : session et recherche restaurées ; export bloqué jusqu’au rechargement
+  du planning, puis réactivé sans perte des pointages.
+- LISTE D’ATTENTE exclue : 46 participants sur le cas Mercredi 20H–21H45.
+
 Les signalements historiques sur le tri et les prénoms n’ont pas de clôture
 explicite documentée ; leur statut reste à confirmer, sans les déclarer bugs actifs.
