@@ -51,7 +51,7 @@ async function downloadPlanning() {
     const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
     const presences = journalEntries
         .filter(e => e.session === sessionKey)
-        .map(p => ({ nom: p.nom, prenom: p.prenom }));
+        .map(p => ({ ...(p.id === undefined ? {} : { id: p.id }), nom: p.nom, prenom: p.prenom }));
 
     const sourceContent = planningFileContent;
     const sourceSession = activeSession;
@@ -117,8 +117,11 @@ function downloadLocally(presences) {
 
     const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
     const ws = wb.Sheets[activeSession.sheet];
-    const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0 });
 
+    const participantRows = new Map();
+    const identity = (nom, prenom) => JSON.stringify([String(nom).trim().toLowerCase(), String(prenom).trim().toLowerCase()]);
+    // Valider les IDs avant toute écriture, y compris lors du repli serveur.
     // Parcourir les lignes et marquer les présences avec 'V'
     for (let r = 3; r < data.length; r++) {
         const stopText = [0, 1, 2, 3].map(c => String(data[r][c] ?? ''))
@@ -129,7 +132,26 @@ function downloadLocally(presences) {
         const prenom = data[r][2];
         if (!nom || !prenom) continue;
 
-        const isPresent = presences.some(p => p.nom === nom && p.prenom === prenom);
+        if (!String(nom).trim() || !String(prenom).trim()) continue;
+        participantRows.set(r, identity(nom, prenom));
+    }
+    const presentRows = new Set(), legacyNames = new Set();
+    for (const p of presences) {
+        const validNames = p && ['nom', 'prenom'].every(key => typeof p[key] === 'string' && p[key].trim());
+        const hasId = p && Object.prototype.hasOwnProperty.call(p, 'id');
+        const row = hasId && typeof p.id === 'string' && /^P(?:[0-9]{3}|[1-9][0-9]{3,6})(?![\s\S])/.test(p.id)
+            ? Number(p.id.slice(1)) : -1;
+        if (!validNames || (hasId && (!participantRows.has(row) || participantRows.get(row) !== identity(p.nom, p.prenom)))) {
+            const message = 'Export refusé : identité ou ID incompatible avec la ligne source.';
+            document.getElementById('downloadMessage').textContent = message;
+            alert(message);
+            return;
+        }
+        if (hasId) presentRows.add(row);
+        else legacyNames.add(identity(p.nom, p.prenom));
+    }
+    for (const [r, name] of participantRows) {
+        const isPresent = presentRows.has(r) || legacyNames.has(name);
         const cellAddress = XLSX.utils.encode_cell({c: activeSession.columnIndex, r: r});
 
         if (isEssaiMarker(ws[cellAddress]?.v)) {
@@ -137,7 +159,7 @@ function downloadLocally(presences) {
         } else if (isPresent) {
             XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress });
         } else {
-            XLSX.utils.sheet_add_aoa(ws, [[null]], { origin: cellAddress });
+            delete ws[cellAddress]; // SheetJS ignore les valeurs null dans sheet_add_aoa.
         }
     }
 

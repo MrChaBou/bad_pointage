@@ -1,6 +1,7 @@
 # flask_app.py (à mettre sur PythonAnywhere)
 
 import base64
+import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import openpyxl
@@ -32,43 +33,52 @@ def update_planning():
         col_idx_target = data['columnIndex'] + 1  # openpyxl est base 1, JS est base 0
         presences = data.get('presences', [])
         
-        # Créer un set des noms complets des présents pour une recherche rapide O(1)
-        present_players = {f"{p['prenom'].strip().lower()}_{p['nom'].strip().lower()}" for p in presences}
-        
-        # 4. Parcourir les lignes du fichier Excel pour marquer les présences
-        # La logique commence à la ligne 4 (index 3 en JS)
-        # On suppose que le nom est en colonne B (2) et le prénom en colonne C (3)
+        # Recenser les seules lignes participants avant toute écriture.
+        participant_rows = {}
         for row in range(4, ws.max_row + 1):
             stop_text = ' '.join(str(ws.cell(row=row, column=col).value or '') for col in range(1, 5))
             stop_text = stop_text.lower().replace('\u2018', "'").replace('\u2019', "'").replace('\u02bc', "'")
-            stop_text = ' '.join(stop_text.split())
-            if "liste d'attente" in stop_text:
+            if "liste d'attente" in ' '.join(stop_text.split()):
                 break
-            
-            # Récupérer le nom et prénom de la ligne actuelle
-            nom_cell = ws.cell(row=row, column=2).value
-            prenom_cell = ws.cell(row=row, column=3).value
-            
-            # S'il n'y a pas de nom/prénom, on passe à la suite
-            if not nom_cell or not prenom_cell:
+            nom = ws.cell(row=row, column=2).value
+            prenom = ws.cell(row=row, column=3).value
+            if not nom or not prenom or not str(nom).strip() or not str(prenom).strip():
                 continue
+            participant_rows[row] = (str(nom).strip().lower(), str(prenom).strip().lower())
 
-            # Construire une clé unique pour le joueur de cette ligne
-            player_key = f"{str(prenom_cell).strip().lower()}_{str(nom_cell).strip().lower()}"
+        present_rows = set()
+        legacy_names = set()
+        for presence in presences:
+            if not isinstance(presence, dict) or not all(
+                isinstance(presence.get(field), str) and presence[field].strip()
+                for field in ('nom', 'prenom')
+            ):
+                return jsonify(success=False, error='Identité de présence invalide'), 400
+            identity = (presence['nom'].strip().lower(), presence['prenom'].strip().lower())
+            if 'id' not in presence:
+                # Compatibilité avec les anciens frontends uniquement sans ID.
+                legacy_names.add(identity)
+                continue
+            participant_id = presence['id']
+            # padStart(3) : trois chiffres minimum, aucun zéro superflu au-delà.
+            if not isinstance(participant_id, str) or not re.fullmatch(
+                r'P(?:[0-9]{3}|[1-9][0-9]{3,6})', participant_id
+            ):
+                return jsonify(success=False, error='ID de présence invalide'), 400
+            row = int(participant_id[1:]) + 1  # SheetJS base 0 -> openpyxl base 1
+            if row not in participant_rows or participant_rows[row] != identity:
+                return jsonify(success=False, error='ID de présence incompatible avec la ligne source'), 400
+            present_rows.add(row)
 
-            # La cellule cible où marquer la présence
+        # Tous les IDs sont validés avant de modifier la moindre cellule.
+        for row, identity in participant_rows.items():
             target_cell = ws.cell(row=row, column=col_idx_target)
-
-            # 5. Mettre à jour la cellule
+            is_present = row in present_rows or identity in legacy_names
             is_essai = str(target_cell.value or '').strip().upper() in ('ESSAI', 'ESSAI PRESENT', 'ESSAI ABSENT')
             if is_essai:
-                target_cell.value = 'ESSAI PRESENT' if player_key in present_players else 'ESSAI ABSENT'
-            elif player_key in present_players:
-                target_cell.value = 'V'
+                target_cell.value = 'ESSAI PRESENT' if is_present else 'ESSAI ABSENT'
             else:
-                # Important : vider la cellule si la personne n'est pas marquée présente
-                # pour corriger d'éventuelles erreurs précédentes.
-                target_cell.value = None
+                target_cell.value = 'V' if is_present else None
 
         # 6. Sauvegarder le fichier modifié en mémoire
         output = BytesIO()
