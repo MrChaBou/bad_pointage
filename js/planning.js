@@ -1,63 +1,6 @@
 // ===================================================================================
 // GESTION DU PLANNING
 // ===================================================================================
-function loadPlanning(file) {
-    if (!file) return;
-    planningWorkbook = null;
-    planningFileContent = null;
-    document.getElementById('planningConfig').classList.add('hidden');
-    updatePlanningExportUI();
-    document.getElementById('planningFileName').textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        if (document.getElementById('planningFile').files[0] !== file) return;
-        try {
-            const content = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(content, { type: 'array', cellDates: false });
-            planningWorkbook = workbook;
-            planningFileContent = content;
-            document.getElementById('planningConfig').classList.remove('hidden');
-            loadSheets();
-            updatePlanningExportUI();
-        } catch(error) {
-            planningWorkbook = null;
-            planningFileContent = null;
-            updatePlanningExportUI();
-            alert('Erreur lecture planning');
-        }
-    };
-    reader.onerror = function() {
-        if (document.getElementById('planningFile').files[0] !== file) return;
-        updatePlanningExportUI();
-        alert('Erreur lecture planning. Rechargez le fichier dans Admin.');
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-// La session restaurée ne contient pas le fichier source : vérifier la cible
-// dans le classeur chargé avant d'autoriser l'un ou l'autre export.
-function getPlanningExportError() {
-    if (!activeSession) return 'Démarrez une session avant d’exporter.';
-    const reloadMessage = `Rechargez le planning source « ${activeSession.planningFileName} » dans Admin, sans redémarrer la session. Vos pointages sont conservés.`;
-    if (!planningFileContent?.byteLength || !planningWorkbook) return reloadMessage;
-    const { sheet, columnIndex, headerRow, dateLabel } = activeSession;
-    const worksheet = planningWorkbook.Sheets[sheet];
-    if (!worksheet || !Number.isInteger(columnIndex) || columnIndex < 0 ||
-        !Number.isInteger(headerRow) || headerRow < 0) {
-        return `Planning incompatible avec la session. ${reloadMessage}`;
-    }
-    const cell = worksheet[XLSX.utils.encode_cell({ c: columnIndex, r: headerRow })];
-    const flag = planningWorkbook.Workbook?.WBProps?.date1904;
-    const date = cell?.t === 'n'
-        ? parseCellAsDate(cell.v, flag === true || flag === 1 || flag === '1' || flag === 'true')
-        : null;
-    const label = date?.toLocaleDateString('fr-FR', {
-        weekday: 'short', day: '2-digit', month: 'short', timeZone: 'UTC'
-    });
-    if (!date || label !== dateLabel) return `Planning incompatible avec la date de la session. ${reloadMessage}`;
-    return '';
-}
-
 function loadSheets() {
     const select = document.getElementById('sheetSelect');
     select.innerHTML = '<option value="">Sélectionnez un créneau...</option>';
@@ -99,8 +42,30 @@ function loadDates() {
     dateSelect.innerHTML = '<option value="">Sélectionnez une date...</option>';
     if (!sheetName) return;
 
-    const worksheet = planningWorkbook.Sheets[sheetName];
-    const date1904Flag = planningWorkbook.Workbook?.WBProps?.date1904;
+    const uniqueDates = getPlanningDates(planningWorkbook, sheetName);
+
+    // Représenter le jour local courant à minuit UTC pour une comparaison calendaire.
+    const today = new Date();
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+
+    // Créer les options de sélection et présélectionner la date du jour
+    uniqueDates.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.value;
+        option.textContent = d.label;
+        dateSelect.appendChild(option);
+
+        // Sélectionner uniquement le même jour calendaire.
+        if (d.date.getTime() === todayUTC) {
+            option.selected = true;
+        }
+    });
+}
+
+// Même détection pour la sélection et la vérification des anciennes sessions.
+function getPlanningDates(workbook, sheetName) {
+    const worksheet = workbook.Sheets[sheetName];
+    const date1904Flag = workbook.Workbook?.WBProps?.date1904;
     const date1904 = date1904Flag === true || date1904Flag === 1 || date1904Flag === '1' || date1904Flag === 'true';
     const datesFound = [];
 
@@ -140,22 +105,7 @@ function loadDates() {
     // Trier par ordre chronologique
     uniqueDates.sort((a, b) => a.date - b.date);
 
-    // Représenter le jour local courant à minuit UTC pour une comparaison calendaire.
-    const today = new Date();
-    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-
-    // Créer les options de sélection et présélectionner la date du jour
-    uniqueDates.forEach(d => {
-        const option = document.createElement('option');
-        option.value = d.value;
-        option.textContent = d.label;
-        dateSelect.appendChild(option);
-
-        // Sélectionner uniquement le même jour calendaire.
-        if (d.date.getTime() === todayUTC) {
-            option.selected = true;
-        }
-    });
+    return uniqueDates;
 }
 
 function isEssaiMarker(value) {
@@ -168,6 +118,7 @@ function isEssaiMarker(value) {
  * Sauvegarde la session dans le stockage local
  */
 function startSession() {
+    if (planningBusy || planningResetting || !planningSource || !planningWorkbook) return;
     const sheet = document.getElementById('sheetSelect').value;
     const dateValue = document.getElementById('dateSelect').value;
     if (!sheet || !dateValue) {
@@ -176,14 +127,49 @@ function startSession() {
     }
 
     const worksheet = planningWorkbook.Sheets[sheet];
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-    const maxRow = range.e.r;
     const [col, row] = dateValue.split('|');
     const columnIndex = parseInt(col);
     const dateColumns = [...new Set(Array.from(document.getElementById('dateSelect').options)
         .filter(option => option.value)
         .map(option => parseInt(option.value.split('|')[0])))];
 
+    const extractedAllParticipants = extractPlanningParticipants(worksheet, columnIndex, dateColumns);
+
+    if (extractedAllParticipants.length === 0) {
+        alert("Aucun joueur trouvé. Vérifiez le format du fichier.");
+        return;
+    }
+
+    // Sauvegarder les participants et créer la session
+    allParticipants = extractedAllParticipants;
+    players = allParticipants.filter(p => p.statut === 'Inscrit' || p.statut === 'ESSAI');
+    saveDataToStorage('badminton_all_participants', allParticipants);
+
+    const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
+
+    activeSession = {
+        sheet: sheet,
+        dateLabel: dateLabel,
+        columnIndex: columnIndex,
+        headerRow: parseInt(row),
+        planningFileName: planningSource.name,
+        sourceHash: planningSource.sha256
+    };
+
+    ++planningOperation;
+    activeSession.dateISO = planningSessionDate(planningWorkbook, activeSession).toISOString().slice(0, 10);
+    saveDataToStorage('badminton_session', activeSession);
+    void persistSessionSource(planningSource, activeSession);
+    resetPointingInterface();
+    updateUI();
+    alert(`Session démarrée. ${players.length} participants chargés. La liste d'attente a été ignorée.`);
+    switchTab('participants');
+}
+
+// Extraction commune au démarrage et à la réparation des anciennes sessions.
+function extractPlanningParticipants(worksheet, columnIndex, dateColumns) {
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    const maxRow = range.e.r;
     const extractedAllParticipants = [];
 
     // Parcourir toutes les lignes à partir de la ligne 4 (index 3)
@@ -219,29 +205,5 @@ function startSession() {
         }
     }
 
-    if (extractedAllParticipants.length === 0) {
-        alert("Aucun joueur trouvé. Vérifiez le format du fichier.");
-        return;
-    }
-
-    // Sauvegarder les participants et créer la session
-    allParticipants = extractedAllParticipants;
-    players = allParticipants.filter(p => p.statut === 'Inscrit' || p.statut === 'ESSAI');
-    saveDataToStorage('badminton_all_participants', allParticipants);
-
-    const dateLabel = document.getElementById('dateSelect').options[document.getElementById('dateSelect').selectedIndex].text;
-
-    activeSession = {
-        sheet: sheet,
-        dateLabel: dateLabel,
-        columnIndex: columnIndex,
-        headerRow: parseInt(row),
-        planningFileName: document.getElementById('planningFile').files[0].name
-    };
-
-    saveDataToStorage('badminton_session', activeSession);
-    resetPointingInterface();
-    updateUI();
-    alert(`Session démarrée. ${players.length} participants chargés. La liste d'attente a été ignorée.`);
-    switchTab('participants');
+    return extractedAllParticipants;
 }

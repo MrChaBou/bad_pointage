@@ -53,65 +53,54 @@ async function downloadPlanning() {
         .filter(e => e.session === sessionKey)
         .map(p => ({ nom: p.nom, prenom: p.prenom }));
 
-    if (backendAvailable) {
-        messageP.textContent = 'Envoi au serveur...';
-        try {
-            // Convertir le fichier en base64 pour l'envoi
-            const sourceContent = planningFileContent;
-            const sourceSession = activeSession;
-            const fileReader = new FileReader();
-            fileReader.readAsDataURL(new Blob([planningFileContent]));
-            fileReader.onload = async () => {
-                if (sourceContent !== planningFileContent || sourceSession !== activeSession || getPlanningExportError()) {
-                    updatePlanningExportUI();
-                    return;
-                }
-                const base64File = fileReader.result.split(',')[1];
-
-                // Envoyer au backend Python
-                const response = await fetch(`${BACKEND_URL}/update-planning`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        file: base64File,
-                        sheet: activeSession.sheet,
-                        columnIndex: activeSession.columnIndex,
-                        presences: presences,
-                        filename: `maj_${activeSession.planningFileName}`
-                    })
-                });
-
-                if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
-
-                const data = await response.json();
-                if (!data.success) throw new Error(data.error);
-
-                // Décoder le fichier base64 reçu et déclencher le téléchargement
-                const byteCharacters = atob(data.file);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], {
-                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                });
-
-                triggerDownload(blob, data.filename);
-                messageP.textContent = 'Téléchargement terminé !';
-            };
-        } catch (error) {
-            alert('Erreur serveur. Tentative locale...');
-            console.error(error);
+    const sourceContent = planningFileContent;
+    const sourceSession = activeSession;
+    const operation = planningOperation;
+    const isCurrent = () => operation === planningOperation &&
+        sourceContent === planningFileContent && sourceSession === activeSession && !getPlanningExportError();
+    try {
+        if (backendAvailable) {
+            messageP.textContent = 'Envoi au serveur...';
+            const base64File = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('Lecture impossible'));
+                reader.onabort = () => reject(new Error('Lecture annulée'));
+                reader.readAsDataURL(new Blob([sourceContent]));
+            });
+            if (!isCurrent()) return;
+            const response = await fetch(`${BACKEND_URL}/update-planning`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file: base64File,
+                    sheet: sourceSession.sheet,
+                    columnIndex: sourceSession.columnIndex,
+                    presences,
+                    filename: `maj_${sourceSession.planningFileName}`
+                })
+            });
+            if (!isCurrent()) return;
+            if (!response.ok) throw new Error('Erreur serveur');
+            const data = await response.json();
+            if (!isCurrent()) return;
+            if (!data.success) throw new Error('Erreur export');
+            const byteArray = Uint8Array.from(atob(data.file), char => char.charCodeAt(0));
+            triggerDownload(new Blob([byteArray], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }), data.filename);
+            messageP.textContent = 'Téléchargement terminé !';
+        } else {
             downloadLocally(presences);
         }
-    } else {
-        downloadLocally(presences);
+    } catch {
+        if (isCurrent()) {
+            alert('Erreur serveur. Tentative locale...');
+            downloadLocally(presences);
+        }
+    } finally {
+        setTimeout(updatePlanningExportUI, 3000);
     }
-
-    setTimeout(() => {
-        updatePlanningExportUI();
-    }, 3000);
 }
 
 /**

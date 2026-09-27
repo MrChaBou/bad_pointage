@@ -9,4 +9,5 @@ function init() {
     document.getElementById('planningFile').addEventListener('change', e => loadPlanning(e.target.files[0]));
     checkBackendStatus();
     updateUI();
+    void restorePlanningSource();
 }

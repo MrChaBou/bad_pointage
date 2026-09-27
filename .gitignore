@@ -10,3 +10,5 @@ __pycache__/
 old_bad/
 old_doc/
 En ligne/
+# Dépendances des tests synthétiques
+tests/node_modules/

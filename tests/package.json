@@ -1,0 +1,6 @@
+{
+  "name": "bad-pointage-tests",
+  "private": true,
+  "scripts": { "test": "node --test *.test.cjs" },
+  "devDependencies": { "fake-indexeddb": "6.2.4", "xlsx": "0.18.5" }
+}

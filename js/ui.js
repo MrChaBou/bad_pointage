@@ -66,4 +66,5 @@ function updatePlanningExportUI() {
     const error = getPlanningExportError();
     document.getElementById('downloadBtn').disabled = !!error;
     document.getElementById('downloadMessage').textContent = activeSession ? error : '';
+    document.getElementById('planningStorageStatus').textContent = planningStorageMessage;
 }

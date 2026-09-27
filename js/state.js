@@ -39,11 +39,8 @@ function loadDataFromStorage() {
  * Réinitialise complètement l'application
  * Supprime toutes les données du stockage local
  */
-function resetAll() {
+async function resetAll() {
     if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) {
-        localStorage.removeItem('badminton_journal');
-        localStorage.removeItem('badminton_session');
-        localStorage.removeItem('badminton_all_participants');
-        location.reload();
+        await resetPlanningApplication();
     }
 }
