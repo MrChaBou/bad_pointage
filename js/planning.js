@@ -166,6 +166,17 @@ function startSession() {
     switchTab('participants');
 }
 
+// SheetJS 0.18.5 expose le remplissage directement dans .s et normalise ARGB en RGB.
+function isNouveauCreneau(worksheet, row) {
+    return [1, 2, 3].every(c => {
+        const fill = worksheet[XLSX.utils.encode_cell({ c, r: row })]?.s;
+        const color = fill?.fgColor;
+        return fill?.patternType === 'solid' && color?.theme == null &&
+            color?.indexed == null && !color?.tint &&
+            ['00FF00', 'FF00FF00'].includes(String(color?.rgb ?? '').toUpperCase());
+    });
+}
+
 // Extraction commune au démarrage et à la réparation des anciennes sessions.
 function extractPlanningParticipants(worksheet, columnIndex, dateColumns) {
     const range = XLSX.utils.decode_range(worksheet['!ref']);
@@ -200,7 +211,8 @@ function extractPlanningParticipants(worksheet, columnIndex, dateColumns) {
                 id: `P${String(r).padStart(3, '0')}`,
                 nom: nom,
                 prenom: prenom,
-                statut: statut
+                statut: statut,
+                nouveauCreneau: isNouveauCreneau(worksheet, r)
             });
         }
     }

@@ -37,7 +37,8 @@ function element() {
         value: '', textContent: '', disabled: false, options: [], files: [],
         classList: { add() {}, remove() {} }, parentElement: { classList: { add() {}, remove() {} } },
         addEventListener() {}, appendChild(option) { this.options.push(option); },
-        set innerHTML(value) { this.options = value.includes('<option') ? [{ value: '', text: '' }] : []; },
+        get innerHTML() { return this.html || ''; },
+        set innerHTML(value) { this.html = value; this.options = value.includes('<option') ? [{ value: '', text: '' }] : []; },
         get selectedIndex() { return Math.max(0, this.options.findIndex(o => o.value === this.value)); }
     };
 }
@@ -78,11 +79,11 @@ function boot(options = {}) {
         }
     });
     const run = code => vm.runInContext(code, context);
-    for (const module of ['state', 'ui', 'planning-storage', 'planning-source', 'planning', 'export', 'app']) {
+    for (const module of ['state', 'ui', 'pointage', 'planning-storage', 'planning-source', 'planning', 'export', 'app']) {
         run(fs.readFileSync(path.join(__dirname, '..', 'js', module + '.js'), 'utf8'));
     }
     context.captureDownload = (blob, name) => downloads.push({ blob, name });
-    run('triggerDownload = captureDownload; resetPointingInterface = () => {}; updateParticipantsUI = () => {};');
+    run('triggerDownload = captureDownload;');
     return { context, run, get, localStorage, indexedDB, downloads, posts, alerts,
         get reloads() { return reloads; },
         load: f => { context.testFile = f; return run('loadPlanning(testFile)'); },

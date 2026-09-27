@@ -1,3 +1,10 @@
+// Badge indépendant du statut ESSAI/Inscrit et de la présence.
+function nouveauBadge(player) {
+    return player.nouveauCreneau === true
+        ? '<span class="inline-block text-xs font-bold px-2 py-1 rounded-full text-blue-800 bg-blue-100">🆕 Nouveau</span>'
+        : '';
+}
+
 /**
  * Met à jour l'affichage de l'onglet Participants
  * Affiche tous les participants avec leur statut de pointage
@@ -63,7 +70,8 @@ function updateParticipantsUI() {
                         ${isPointed ? '<p class="text-xs text-green-600 font-medium mt-1">Présent</p>' : ''}
                     </div>
                 </div>
-                <div>
+                <div class="flex flex-wrap justify-end gap-2">
+                    ${nouveauBadge(p)}
                     <span class="text-xs font-bold px-2 py-1 rounded-full ${statusColor}">${statusText}</span>
                 </div>
             </div>
@@ -190,6 +198,7 @@ function searchPlayerDynamic(e) {
                 ${checkIcon}
                 <div class="flex-1">
                     <p class="font-semibold text-base">${p.prenom} ${p.nom}</p>
+                    ${nouveauBadge(p)}
                     ${isPointed ? '<p class="text-xs text-green-600 font-medium">Déjà pointé</p>' : ''}
                 </div>
             </div>
@@ -213,6 +222,7 @@ function selectPlayerFromSearch(playerId) {
 }
 
 function showPlayer(player) {
+    document.getElementById('playerBadges').innerHTML = nouveauBadge(player);
     document.getElementById('playerName').textContent = `${player.prenom} ${player.nom}`;
     document.getElementById('playerId').textContent = `ID: ${player.id}`;
     document.getElementById('playerCard').classList.remove('hidden');
@@ -316,6 +326,7 @@ function showFeedback(message, color, icon) {
     const feedbackBox = document.getElementById('feedbackBox');
     document.getElementById('feedbackIcon').textContent = icon;
     document.getElementById('feedbackText').textContent = message;
+    document.getElementById('feedbackBadges').innerHTML = nouveauBadge(currentPlayer);
     document.getElementById('feedbackName').textContent = `${currentPlayer.prenom} ${currentPlayer.nom}`;
     feedbackBox.className = `text-white rounded-2xl p-6 text-center shadow-lg bg-${color}-500`;
     feedback.classList.remove('hidden');

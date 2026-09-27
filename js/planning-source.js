@@ -55,6 +55,23 @@ function legacyPlanningMatches(workbook, session) {
         ['id', 'nom', 'prenom', 'statut'].every(key => p[key] === allParticipants[i][key]));
 }
 
+// Ne compléter que les attributs absents, après validation de la source et des identités.
+function enrichRestoredParticipants(workbook, session) {
+    if (!allParticipants.some(p => typeof p.nouveauCreneau !== 'boolean') ||
+        !legacyPlanningMatches(workbook, session)) return;
+    const worksheet = workbook.Sheets[session.sheet];
+    allParticipants.forEach(p => {
+        if (typeof p.nouveauCreneau !== 'boolean') {
+            p.nouveauCreneau = isNouveauCreneau(worksheet, Number(p.id.slice(1)));
+        }
+    });
+    saveDataToStorage('badminton_all_participants', allParticipants);
+    updateParticipantsUI();
+    const input = document.getElementById('searchInput');
+    if (input.value.trim().length >= 2) searchPlayerDynamic({ target: input });
+    if (currentPlayer) showPlayer(currentPlayer);
+}
+
 function getPlanningExportError() {
     if (planningResetting) return 'Réinitialisation en cours…';
     if (!activeSession) return 'Démarrez une session avant d’exporter.';
@@ -110,7 +127,7 @@ async function loadPlanning(file) {
         if (operation !== planningOperation) return;
         if (!bytes.byteLength) throw new Error('Fichier vide');
         // Donner au parseur une copie : les octets conservés restent intacts.
-        const workbook = XLSX.read(new Uint8Array(bytes.slice(0)), { type: 'array', cellDates: false });
+        const workbook = XLSX.read(new Uint8Array(bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
         const source = { version: 1, bytes, sha256, name: file.name,
             size: bytes.byteLength, type: file.type || '', lastModified: file.lastModified || 0 };
         installPlanningSource(source, workbook);
@@ -121,6 +138,7 @@ async function loadPlanning(file) {
             saveDataToStorage('badminton_session', activeSession);
         }
         if (activeSession?.sourceHash === sha256 && !planningCompatibilityError(workbook, activeSession)) {
+            enrichRestoredParticipants(workbook, activeSession);
             void persistSessionSource(source, activeSession);
         } else if (activeSession) {
             planningStorageMessage = 'Autre planning chargé : la source sauvegardée de la session reste inchangée. Démarrez une nouvelle session pour utiliser ce fichier.';
@@ -157,9 +175,10 @@ async function restorePlanningSource() {
         const hash = await hashPlanningBytes(source.bytes);
         if (!isCurrent()) return;
         if (hash !== session.sourceHash) throw new Error('Source altérée');
-        const workbook = XLSX.read(new Uint8Array(source.bytes.slice(0)), { type: 'array', cellDates: false });
+        const workbook = XLSX.read(new Uint8Array(source.bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
         if (planningCompatibilityError(workbook, session)) throw new Error('Cible incompatible');
         installPlanningSource(source, workbook);
+        enrichRestoredParticipants(workbook, session);
         planningStorageMessage = 'Source restaurée depuis ce navigateur.';
     } catch {
         if (!isCurrent()) return;
