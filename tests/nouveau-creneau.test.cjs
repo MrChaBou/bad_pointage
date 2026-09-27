@@ -23,13 +23,23 @@ function styledFixture() {
         entry.content = Buffer.from(transform(Buffer.from(entry.content).toString()));
         entry.size = entry.content.length;
     }
-    edit('xl/styles.xml', xml => xml.replace('<fills count="2">', '<fills count="3">')
-        .replace('</fills>', '<fill><patternFill patternType="solid"><fgColor rgb="FF00FF00"/></patternFill></fill></fills>')
-        .replace('<cellXfs count="1">', '<cellXfs count="2">')
-        .replace('</cellXfs>', '<xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyFill="1"/></cellXfs>'));
+    edit('xl/styles.xml', xml => {
+        // Même structure que les cas témoins : fills 18/19, styles élevés et composites.
+        const fills = Array.from({ length: 20 }, (_, i) => i < 18
+            ? '<fill><patternFill patternType="solid"><fgColor theme="0"/><bgColor rgb="FF00FF00"/></patternFill></fill>'
+            : `<fill><patternFill patternType="solid"><fgColor rgb="FF00FF00"/>${i === 18 ? '<bgColor rgb="FF00FF00"/>' : '<bgColor indexed="64"/>'}</patternFill></fill>`);
+        const xfs = Array.from({ length: 550 }, (_, i) =>
+            `<xf numFmtId="0" fontId="1" fillId="${i === 547 ? 18 : i >= 548 ? 19 : 0}" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>`);
+        return xml.replace(/<fills[\s\S]*?<\/fills>/, `<fills count="20">${fills.join('')}</fills>`)
+            .replace(/<cellXfs[\s\S]*?<\/cellXfs>/, `<cellXfs count="550">${xfs.join('')}</cellXfs>`)
+            .replace('<fonts count="1">', '<fonts count="2">')
+            .replace('</fonts>', '<font><b/><sz val="11"/><name val="Arial"/></font></fonts>')
+            .replace('<borders count="1">', '<borders count="2">')
+            .replace('</borders>', '<border><left style="thin"><color indexed="64"/></left><right/><top/><bottom/><diagonal/></border></borders>');
+    });
     edit('xl/worksheets/sheet1.xml', xml => {
-        for (const cell of ['B4', 'C4', 'D4', 'E5', 'B7', 'C7', 'D7']) {
-            xml = xml.replace(new RegExp(`<c r="${cell}"`), `<c r="${cell}" s="1"`);
+        for (const [cell, style] of Object.entries({ B4: 547, C4: 548, D4: 549, E5: 547, B7: 547, C7: 548, D7: 549 })) {
+            xml = xml.replace(new RegExp(`<c r="${cell}"`), `<c r="${cell}" s="${style}"`);
         }
         return xml;
     });
@@ -113,4 +123,40 @@ test('export serveur conserve les octets stylés ; export local conserve ESSAI e
     app.run('downloadLocally([])');
     ws = XLSX.read(await app.downloads.at(-1).blob.arrayBuffer()).Sheets['Créneau'];
     assert.equal(ws.E7.v, 'ESSAI ABSENT');
+});
+
+
+test('restauration recalcule les faux déjà persistés, sans perdre les pointages', async () => {
+    const { app } = await setup();
+    app.run(`allParticipants.forEach(p => p.nouveauCreneau = false);
+        saveDataToStorage('badminton_all_participants', allParticipants);
+        journalEntries = [{id:'P003',session:activeSession.sheet+'_'+activeSession.dateLabel}];
+        saveDataToStorage('badminton_journal', journalEntries)`);
+    const next = boot({ localStorage: app.localStorage, indexedDB: app.indexedDB });
+    next.run('loadDataFromStorage()');
+    assert.equal(next.run('players[0].nouveauCreneau'), false);
+    await next.run('restorePlanningSource()');
+    assert.equal(next.run('players[0].nouveauCreneau'), true);
+    assert.equal(next.run('players[1].nouveauCreneau'), false);
+    assert.equal(next.run('players[3].nouveauCreneau'), true);
+    assert.equal(next.run('journalEntries.length'), 1);
+    assert.equal(JSON.parse(next.localStorage.getItem('badminton_all_participants'))[0].nouveauCreneau, true);
+    assert.match(next.get('participantsList').innerHTML, /🆕 Nouveau/);
+});
+
+test('réimport compatible répare les booléens ; source différente ne les réécrit pas', async () => {
+    const { app, bytes } = await setup();
+    app.run(`allParticipants.forEach(p => p.nouveauCreneau = false);
+        saveDataToStorage('badminton_all_participants', allParticipants)`);
+    // Ajouter un octet change le hash mais laisse le ZIP lisible par SheetJS.
+    const other = new Uint8Array(bytes.byteLength + 1);
+    other.set(new Uint8Array(bytes));
+    await app.load(file(other.buffer));
+    assert.match(app.run('getPlanningExportError()'), /pas la source/);
+    assert.equal(app.run('players[0].nouveauCreneau'), false);
+    await app.load(file(bytes));
+    assert.equal(app.run('players[0].nouveauCreneau'), true);
+    assert.equal(app.run('players[1].nouveauCreneau'), false);
+    assert.equal(app.run('getPlanningExportError()'), '');
+    assert.equal(JSON.parse(app.localStorage.getItem('badminton_all_participants'))[0].nouveauCreneau, true);
 });

@@ -55,16 +55,18 @@ function legacyPlanningMatches(workbook, session) {
         ['id', 'nom', 'prenom', 'statut'].every(key => p[key] === allParticipants[i][key]));
 }
 
-// Ne compléter que les attributs absents, après validation de la source et des identités.
+// Recalculer cet attribut dérivé, après validation de la source et des identités.
 function enrichRestoredParticipants(workbook, session) {
-    if (!allParticipants.some(p => typeof p.nouveauCreneau !== 'boolean') ||
-        !legacyPlanningMatches(workbook, session)) return;
+    if (!legacyPlanningMatches(workbook, session)) return;
     const worksheet = workbook.Sheets[session.sheet];
+    let changed = false;
     allParticipants.forEach(p => {
-        if (typeof p.nouveauCreneau !== 'boolean') {
-            p.nouveauCreneau = isNouveauCreneau(worksheet, Number(p.id.slice(1)));
-        }
+        const nouveau = isNouveauCreneau(worksheet, Number(p.id.slice(1)));
+        if (p.nouveauCreneau === nouveau) return;
+        p.nouveauCreneau = nouveau;
+        changed = true;
     });
+    if (!changed) return;
     saveDataToStorage('badminton_all_participants', allParticipants);
     updateParticipantsUI();
     const input = document.getElementById('searchInput');
