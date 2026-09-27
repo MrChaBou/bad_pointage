@@ -21,7 +21,8 @@ class ExportPresenceTests(unittest.TestCase):
         self.ws['E37'] = 'ESSAI PRESENT'
         self.ws['E38'] = 'ESSAI ABSENT'
         self.ws['B34'].fill = PatternFill('solid', fgColor='FF00FF00')
-        self.ws['E35'].font = Font(bold=True, color='FFFF0000')
+        # Rouge sombre déjà contrasté sur blanc : ce style doit rester intact.
+        self.ws['E35'].font = Font(bold=True, color='FF880000')
         self.ws['E35'].number_format = '@'
         self.ws['A39'] = ' LISTE D’ATTENTE '
         self.ws['B39'] = 'Nom'

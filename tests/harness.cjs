@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 const { IDBFactory } = require('fake-indexeddb');
 const XLSX = require('xlsx');
+const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
 const day = Math.floor(Date.UTC(2026, 8, 27) / 86400000) + 25569;
 
 function deferred() {
@@ -64,6 +65,7 @@ function boot(options = {}) {
     }
     const context = vm.createContext({
         console, ArrayBuffer, Uint8Array, Blob, FileReader, crypto: webcrypto,
+        DOMParser, XMLSerializer, TextEncoder, TextDecoder, URL,
         indexedDB, localStorage, setTimeout: (fn, ms) => setTimeout(fn, ms === 3000 ? 0 : (ms === 5000 && options.fastStorageTimeout ? 20 : ms)), clearTimeout,
         alert: text => alerts.push(text), confirm: () => true,
         location: { reload: () => { reloads++; } },
@@ -79,7 +81,7 @@ function boot(options = {}) {
         }
     });
     const run = code => vm.runInContext(code, context);
-    for (const module of ['state', 'ui', 'pointage', 'planning-storage', 'planning-source', 'planning', 'export', 'app']) {
+    for (const module of ['state', 'ui', 'pointage', 'planning-storage', 'planning-source', 'planning', 'export-styles', 'export', 'app']) {
         run(fs.readFileSync(path.join(__dirname, '..', 'js', module + '.js'), 'utf8'));
     }
     context.captureDownload = (blob, name) => downloads.push({ blob, name });

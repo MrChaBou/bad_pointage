@@ -7,6 +7,90 @@ from flask_cors import CORS
 import openpyxl
 from io import BytesIO
 
+from copy import copy
+from colorsys import rgb_to_hls, hls_to_rgb
+from xml.etree import ElementTree
+from openpyxl.styles import Color
+from openpyxl.styles.colors import COLOR_INDEX
+
+
+# Indices SpreadsheetML : l'ordre XML dk1/lt1 n'est pas l'ordre des indices.
+THEME_COLORS = ('lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2',
+                'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink')
+
+
+def planning_theme_colors(workbook):
+    if not workbook.loaded_theme:
+        return {}
+    root = ElementTree.fromstring(workbook.loaded_theme)
+    scheme = root.find('.//{*}clrScheme')
+    if scheme is None:
+        return {}
+    colors = {}
+    for index, name in enumerate(THEME_COLORS):
+        entry = scheme.find('{*}' + name)
+        if entry is not None and len(entry):
+            value = entry[0]
+            colors[index] = value.get('lastClr') or value.get('val')
+    return colors
+
+
+def planning_color_rgb(color, themes, indexed=COLOR_INDEX):
+    if color is None:
+        return None
+    if color.type == 'rgb':
+        value = color.rgb
+    elif color.type == 'theme':
+        value = themes.get(color.theme)
+    elif color.type == 'indexed' and 0 <= color.indexed < len(indexed):
+        value = indexed[color.indexed]
+    else:
+        return None
+    if not isinstance(value, str) or not re.fullmatch(r'(?:[0-9a-fA-F]{2})?[0-9a-fA-F]{6}', value):
+        return None
+    rgb = tuple(int(value[-6:][i:i + 2], 16) / 255 for i in (0, 2, 4))
+    if color.tint:
+        h, light, saturation = rgb_to_hls(*rgb)
+        light = light * (1 + color.tint) if color.tint < 0 else light * (1 - color.tint) + color.tint
+        rgb = hls_to_rgb(h, light, saturation)
+    return rgb
+
+
+def planning_luminance(rgb):
+    linear = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in rgb]
+    return sum(v * weight for v, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+
+def planning_contrast(first, second):
+    a, b = sorted((planning_luminance(first), planning_luminance(second)))
+    return (b + 0.05) / (a + 0.05)
+
+
+def ensure_marker_contrast(cell, themes, indexed=COLOR_INDEX):
+    """Changer uniquement la couleur d'un marqueur dont le contraste est < 4,5:1."""
+    if cell.value not in ('V', 'ESSAI PRESENT', 'ESSAI ABSENT'):
+        return
+    if cell.fill.fill_type == 'solid':
+        background = planning_color_rgb(cell.fill.fgColor, themes, indexed)
+    elif cell.fill.fill_type in (None, 'none'):
+        background = (1, 1, 1)
+    else:
+        return  # Un motif ou dégradé n'a pas de fond uniforme déductible.
+    foreground = planning_color_rgb(cell.font.color, themes, indexed)
+    if background is None or foreground is None or planning_contrast(background, foreground) >= 4.5:
+        return
+    replacement = max(((0, 0, 0), (1, 1, 1)), key=lambda rgb: planning_contrast(background, rgb))
+    # Préférer une couleur de thème uniquement si elle représente bien le RGB choisi.
+    replacement_color = Color(rgb='FFFFFFFF' if replacement[0] else 'FF000000')
+    for index in (0, 1):
+        if planning_color_rgb(Color(theme=index), themes) == replacement:
+            replacement_color = Color(theme=index)
+            break
+    font = copy(cell.font)
+    font.color = replacement_color
+    cell.font = font
+
+
 app = Flask(__name__)
 
 # Origines autorisées : serveurs frontend locaux et GitHub Pages.
@@ -70,6 +154,7 @@ def update_planning():
                 return jsonify(success=False, error='ID de présence incompatible avec la ligne source'), 400
             present_rows.add(row)
 
+        themes = planning_theme_colors(wb)
         # Tous les IDs sont validés avant de modifier la moindre cellule.
         for row, identity in participant_rows.items():
             target_cell = ws.cell(row=row, column=col_idx_target)
@@ -79,6 +164,7 @@ def update_planning():
                 target_cell.value = 'ESSAI PRESENT' if is_present else 'ESSAI ABSENT'
             else:
                 target_cell.value = 'V' if is_present else None
+            ensure_marker_contrast(target_cell, themes, wb._colors)
 
         # 6. Sauvegarder le fichier modifié en mémoire
         output = BytesIO()

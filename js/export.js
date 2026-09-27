@@ -28,14 +28,14 @@ async function checkBackendStatus() {
         backendAvailable = false;
         statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-yellow-50 border-yellow-200';
         icon.textContent = '⚠️';
-        text.textContent = 'Serveur indisponible. Les styles ne seront PAS préservés.';
+        text.textContent = 'Serveur indisponible. Export local disponible.';
     }
 }
 
 /**
  * Télécharge le planning Excel mis à jour avec les présences
  * Utilise le backend Python si disponible pour préserver les styles
- * Sinon, effectue une mise à jour locale (sans préservation des styles)
+ * Sinon, effectue une mise à jour locale du XLSX source
  */
 async function downloadPlanning() {
     if (getPlanningExportError()) {
@@ -105,7 +105,7 @@ async function downloadPlanning() {
 
 /**
  * Effectue une mise à jour locale du fichier Excel (sans backend)
- * ⚠️ Les styles Excel ne sont PAS préservés avec cette méthode
+ * Préserve les styles XLSX et corrige uniquement les marqueurs peu contrastés.
  * @param {Array} presences - Liste des présents à marquer dans le fichier
  */
 function downloadLocally(presences) {
@@ -113,7 +113,6 @@ function downloadLocally(presences) {
         updatePlanningExportUI();
         return;
     }
-    alert("Traitement local, les styles seront perdus.");
 
     const wb = XLSX.read(planningFileContent, { type: 'array', cellDates: true });
     const ws = wb.Sheets[activeSession.sheet];
@@ -150,20 +149,36 @@ function downloadLocally(presences) {
         if (hasId) presentRows.add(row);
         else legacyNames.add(identity(p.nom, p.prenom));
     }
+    const updates = new Map();
     for (const [r, name] of participantRows) {
         const isPresent = presentRows.has(r) || legacyNames.has(name);
         const cellAddress = XLSX.utils.encode_cell({c: activeSession.columnIndex, r: r});
 
-        if (isEssaiMarker(ws[cellAddress]?.v)) {
-            XLSX.utils.sheet_add_aoa(ws, [[isPresent ? 'ESSAI PRESENT' : 'ESSAI ABSENT']], { origin: cellAddress });
-        } else if (isPresent) {
-            XLSX.utils.sheet_add_aoa(ws, [['V']], { origin: cellAddress });
-        } else {
-            delete ws[cellAddress]; // SheetJS ignore les valeurs null dans sheet_add_aoa.
-        }
+        const marker = isEssaiMarker(ws[cellAddress]?.v)
+            ? (isPresent ? 'ESSAI PRESENT' : 'ESSAI ABSENT') : (isPresent ? 'V' : null);
+        updates.set(cellAddress, marker);
     }
 
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    let wbout;
+    try {
+        const bytes = new Uint8Array(planningFileContent);
+        if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+            wbout = exportStyledPlanning(planningFileContent, activeSession.sheet, updates);
+        } else {
+            // Compatibilité .xls : SheetJS convertit vers un XLSX à styles simples.
+            alert('Export local XLS : les styles seront perdus.');
+            for (const [address, marker] of updates) {
+                if (marker === null) delete ws[address];
+                else XLSX.utils.sheet_add_aoa(ws, [[marker]], { origin: address });
+            }
+            wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        }
+    } catch {
+        const message = 'Export local impossible : le classeur ne peut pas être modifié en préservant ses styles.';
+        document.getElementById('downloadMessage').textContent = message;
+        alert(message);
+        return;
+    }
     const blob = new Blob([wbout], {type: 'application/octet-stream'});
     triggerDownload(blob, `local_maj_${activeSession.planningFileName}`);
 }
