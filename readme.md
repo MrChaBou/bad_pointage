@@ -1,13 +1,13 @@
 # 🏸 Application de Pointage Badminton
 
-Une application web 100% mobile pour simplifier le pointage des présences lors des séances de badminton et automatiser la mise à jour des plannings Excel, **avec préservation des styles via le backend Python**.
+Une application web 100% mobile pour simplifier le pointage des présences lors des séances de badminton et automatiser la mise à jour des plannings Excel, **avec préservation des styles XLSX via le backend Python ou le fallback local**.
 
 Production : https://mrchabou.github.io/bad_pointage/
 
-**État au 09/09/2026 : production déployée et validée manuellement par le pilote.**
-`main` a été fast-forwardée jusqu’à `29337bb`, puis poussée sur GitHub ; GitHub Pages
-sert la nouvelle version. `flask_app.py` a été mis à jour sur PythonAnywhere et
-la Web App rechargée. `/health` répond HTTP 200 avec `{"status":"ok"}`.
+**État au 27/09/2026 : production déployée au commit `892a8d8` sur `main`.**
+Selon le PILOTE, GitHub Pages et PythonAnywhere utilisent le nouveau frontend et
+le nouveau `flask_app.py`, avec `/health` OK. Cache commun : `2026.09.27.2`.
+Les validations UI ci-dessous sont celles du PILOTE, distinctes des tests automatisés.
 
 
 ---
@@ -40,7 +40,7 @@ Le classeur est traité en mémoire et téléchargé ; le fichier source reste i
 -   **👥 Extraction Intelligente des Joueurs :**
     -   Lit la première liste : **inscrits et essais admissibles pour la date choisie**, depuis les colonnes B et C du fichier.
     -   S'arrête au séparateur « LISTE D'ATTENTE » détecté en A:D, y compris dans une cellule fusionnée ancrée en A. La détection normalise la casse, les apostrophes typographiques et les espaces insécables/multiples.
-    -   Les exports backend et local arrêtent également leurs écritures au séparateur. Le mode local conserve sa limitation de préservation des styles.
+    -   Les exports backend et local arrêtent également leurs écritures au séparateur. Le fallback XLSX préserve désormais les styles.
 -   **👆 Pointage Tactile et Intuitif :**
     -   Recherche rapide par nom/prénom.
     -   Un énorme bouton pour pointer/annuler.
@@ -48,8 +48,8 @@ Le classeur est traité en mémoire et téléchargé ; le fichier source reste i
 -   **🗓️ Dates Excel :** Les jours calendaires sont lus et affichés indépendamment du fuseau horaire, avec prise en compte des calendriers Excel 1900 et 1904.
 -   **🧑 Participants ESSAI :** Les marqueurs `ESSAI`, `ESSAI PRESENT` et `ESSAI ABSENT` identifient les essais. Une personne ayant un marqueur sur une date détectée n’est proposée que si la date sélectionnée porte aussi un de ces marqueurs. Les deux exports écrivent `ESSAI PRESENT` ou `ESSAI ABSENT` dans la cellule d’essai de cette date.
 -   **🎨 Export avec styles :** Le backend Python/Openpyxl renvoie le classeur complet ; il écrit `V` pour les inscrits présents et vide les cellules des absents dans la colonne sélectionnée, avant la liste d’attente.
--   **🌐 Export local de secours :** Si le serveur backend est indisponible, l'application peut toujours effectuer une mise à jour locale du fichier (en avertissant l'utilisateur que les styles seront perdus).
--   **💾 Persistance des Données :** La session, les participants et les pointages sont sauvegardés dans le navigateur. Après F5, la recherche fonctionne immédiatement sans premier pointage préalable. Le fichier Excel source, conservé uniquement en mémoire, doit être rechargé avant export ; le bouton reste désactivé avec un message explicite jusque-là.
+-   **🌐 Export local de secours :** Si le serveur backend est indisponible ou si sa requête échoue, le fallback modifie directement l’archive XLSX source en préservant les styles (`local_maj_...`).
+-   **💾 Persistance des Données :** La session, les participants et les pointages sont sauvegardés dans le navigateur. Après F5, la recherche fonctionne immédiatement sans premier pointage préalable. Les octets originaux du fichier source sont conservés dans IndexedDB et restaurés après F5, avec contrôle SHA-256 et de la cible de session. Un réimport est requis seulement si la source ne peut pas être restaurée ou validée.
 
 ---
 
@@ -71,9 +71,9 @@ L'utilisation de l'application est conçue pour être la plus simple possible :
     -   Touchez le grand bouton pour marquer sa présence.
 
 4.  **Onglet "Admin" (en fin de session) :**
-    -   Après F5, rechargez le planning source dans Admin **sans redémarrer la session** : les pointages sont conservés. L’export vérifie la présence du créneau et la compatibilité de la cellule de date avec la session restaurée.
+    -   Après F5, attendez la restauration automatique de la source. Si elle échoue, rechargez le planning source dans Admin **sans redémarrer la session** : les pointages sont conservés. L’export contrôle l’identité du fichier et la cible de session.
     -   Cliquez sur "Télécharger le planning mis à jour".
-    -   Récupérez le classeur mis à jour pour la date de session, avec les styles préservés via le backend.
+    -   Récupérez le classeur mis à jour pour la date de session, avec les styles XLSX préservés via le backend ou le fallback local.
 
 ---
 
@@ -131,7 +131,7 @@ Terminal 2 — frontend :
 .venv/bin/python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Ouvrir `http://127.0.0.1:8000/index.html?v=260908` (pas un fichier `file://`).
+Ouvrir `http://127.0.0.1:8000/index.html` (pas un fichier `file://`).
 Le frontend servi sur `localhost` ou `127.0.0.1` appelle `http://127.0.0.1:5000`.
 Sur GitHub Pages, il conserve `https://mrchabou.eu.pythonanywhere.com`.
 Le backend autorise les origines `http://127.0.0.1:8000`,
@@ -154,9 +154,15 @@ Les dépendances backend sont dans `requirements.txt`. Tailwind et SheetJS sont
 chargés par CDN : une connexion Internet reste nécessaire. Les données navigateur
 sont propres à chaque origine ; garder la même adresse pour les essais.
 Après F5, la session, les participants, la recherche et les pointages sont restaurés.
-Recharger le fichier source dans Admin **sans redémarrer la session** pour exporter.
-Les exports backend et local sont bloqués tant que le classeur manque ou que
-la cible de session est incompatible.
+La source est restaurée depuis IndexedDB ; son SHA-256 et sa compatibilité avec
+la session sont vérifiés. En cas d’échec, réimporter le fichier dans Admin
+**sans redémarrer la session**. Les deux exports attendent une source valide.
+Un fichier différent, même de même nom, ne remplace pas la source de la session.
+Si IndexedDB échoue, l’export reste possible en mémoire, mais un réimport peut
+être nécessaire après F5. Reset efface source, session, participants et journal.
+Le stockage navigateur n’est pas une sauvegarde ; HTTPS ou localhost est requis
+pour le calcul SHA-256. Les anciennes sessions sans hash exigent un réimport
+compatible avec leur date et leurs participants.
 
 `index.html` est la source frontend canonique du projet.
 Structure du frontend sans étape de build :
@@ -166,18 +172,22 @@ Structure du frontend sans étape de build :
 - `js/state.js` : configuration backend, état partagé et stockage navigateur.
 - `js/ui.js` : navigation, affichage et disponibilité de l’export.
 - `js/pointage.js` : participants, recherche, pointage et annulation.
-- `js/planning.js` : import, dates, essais par date, session et contrôle avant export.
+- `js/planning-storage.js` : accès IndexedDB sérialisés, sauvegarde et effacement de la source.
+- `js/planning-source.js` : import, SHA-256, contrôle source/session, restauration et Reset.
+- `js/planning.js` : dates, participants, essais par date et démarrage de session.
+- `js/export-styles.js` : modification de l’archive XLSX et contraste du fallback.
 - `js/export.js` : disponibilité backend et exports backend/local.
 - `js/app.js` : initialisation et branchement des événements.
 
 Les scripts classiques sont chargés en fin de page dans l’ordre : `state`, `ui`,
-`pointage`, `planning`, `export`, `app`. Les fonctions globales restent accessibles
-aux gestionnaires inline. Publier `index.html`, `css/app.css` et les six fichiers
+`pointage`, `planning-storage`, `planning-source`, `planning`, `export-styles`,
+`export`, `app`. Les fonctions globales restent accessibles
+aux gestionnaires inline. Publier `index.html`, `css/app.css` et les neuf fichiers
 JS ensemble, en conservant les chemins relatifs utilisables sous `/bad_pointage/`.
 Tailwind et SheetJS sont chargés par CDN.
 
 - `main:index.html` est la version servie par GitHub Pages.
-- `dev/local-test-cycle:index.html` est la version de développement/test.
+- `dev/local-test-cycle` est une branche historique ; le run actuel est intégré à `main`.
 - Frontend canonique : `index.html` ; backend canonique actif : `flask_app.py`.
 - Le backend utilise Flask local en développement et Flask/PythonAnywhere en production.
 - Les fichiers datés ne sont plus des sources de vérité. Le frontend daté est
@@ -188,11 +198,25 @@ Les anciens états navigateur créés avant les correctifs de sélection des par
 peuvent nécessiter un nouvel import et un démarrage de session pour reconstruire la
 liste. Cette migration se distingue d’un simple F5 dans la version actuelle.
 
+### Export par ID et contraste
+
+Le frontend transmet `{id, nom, prenom}` ; l’ID contient l’index SheetJS en base 0
+(`P034` → ligne openpyxl 35). Les deux exports valident ID, identité et ligne
+participant avant LISTE D’ATTENTE. Le fallback nom/prénom seul est réservé aux
+anciennes entrées sans ID ; un ID invalide ou incompatible refuse l’export.
+Pour `V`, `ESSAI PRESENT` et `ESSAI ABSENT`, un contraste calculé < 4,5:1 remplace
+uniquement la couleur de police par le noir ou le blanc offrant le meilleur
+contraste. Les styles déjà lisibles et les autres propriétés restent inchangés.
+Le backend copie la police openpyxl ; le fallback modifie le XML de la feuille
+et ajoute les seuls styles nécessaires dans l’archive XLSX source.
+Le badge Nouveau (vert uni explicite en B/C/D) n’influence pas la présence ni ESSAI.
+
 ### Limites actuelles
 
-- Le mode local ne préserve pas les styles ; l’effacement d’une ancienne présence
-  par écriture de `null` a été signalé comme non effectif dans le journal et n’a
-  pas de correctif identifié. Privilégier le backend pour l’export complet.
+- Le fallback XLSX préserve les styles et efface effectivement les absents.
+  Seule la conversion locale d’un ancien `.xls` conserve une perte des styles annoncée.
+- Couleurs non résolubles, motifs et dégradés : pas de recoloration arbitraire.
+  Les mises en forme conditionnelles peuvent modifier le rendu.
 - L’import peut afficher une ligne avec un nom seul, mais les deux exports ignorent
   les lignes sans nom ou sans prénom.
 - Les dates reconnues sont numériques, dans les 10 premières lignes et 20 premières
@@ -206,11 +230,17 @@ liste. Cette migration se distingue d’un simple F5 dans la version actuelle.
 Le déploiement est effectué et validé en production. Les étapes ci-dessous
 restent la procédure de référence pour les prochains déploiements.
 
-Validation manuelle confirmée par le pilote : frontend chargé sans erreur, backend
-disponible, export normal avec `V` dans la bonne colonne, `ESSAI PRESENT` et
-`ESSAI ABSENT`. Après F5, session et recherche restaurées, export bloqué jusqu’au
-rechargement du planning puis réactivé sans perte des pointages. LISTE D’ATTENTE
-exclue : 46 participants sur le cas Mercredi 20H–21H45.
+Validation réelle du PILOTE au 27/09 : local avec backend OK, y compris F5 ;
+local sans backend OK avec styles XLSX préservés ; PythonAnywhere à jour et
+`/health` OK ; production Edge et Safari iPhone OK. L’export réel `maj_...`
+contient les trois marqueurs visibles. Le symptôme « trois pointages, deux V »
+était dû au style source de G35, pas à une perte de présence.
+Les validations antérieures (ESSAI et 46 participants hors attente le mercredi)
+restent consignées dans [le journal](journal_dev.md).
+
+Dernier run automatisé : 45 tests frontend et 9 backend réussis, contrôles du
+classeur réel inclus (`BAD_POINTAGE_REFERENCE`). Il ne constitue pas une
+validation UI ; aucune suite métier n’est rejouée pour cette clôture documentaire.
 
 ### 1. Backend (PythonAnywhere)
 
@@ -223,14 +253,17 @@ exclue : 46 participants sur le cas Mercredi 20H–21H45.
 
 ### 2. Frontend (GitHub Pages)
 
-1. Après fusion autorisée, publier depuis `main` le HTML, le CSS et les six fichiers
+1. Après fusion autorisée, publier depuis `main` le HTML, le CSS et les neuf fichiers
    JavaScript décrits ci-dessus.
 2. La constante `BACKEND_URL` se trouve dans `js/state.js` : elle sélectionne Flask
    local sur `localhost`/`127.0.0.1`, et PythonAnywhere sur les autres hôtes.
    Adapter l’URL de production dans ce fichier pour un autre déploiement.
 3. Vérifier en production le chargement des ressources, les dates, l’exclusion de
-   LISTE D’ATTENTE, les essais par date, la recherche après F5, le blocage de
-   l’export puis sa reprise après rechargement du fichier source.
+   LISTE D’ATTENTE, les essais par date, la restauration après F5, le contraste
+   et les exports backend/local. Si la restauration échoue, vérifier le réimport.
+4. Tous les assets CSS/JS locaux utilisent `?v=2026.09.27.2` dans `index.html`.
+   Incrémenter cette version commune à chaque changement CSS/JS ; changer seulement
+   la query string de la page ne renouvelle pas les URL de ses scripts.
 
 ---
 ## 💡 Évolutions Possibles

@@ -1,5 +1,94 @@
 # Journal de développement — Bad Pointage
 
+## 27/09/2026 — Clôture du run, production validée au commit 892a8d8
+
+### Référence et architecture
+
+- `main` au commit `892a8d8` ; GitHub Pages déployé depuis cette branche selon
+  le PILOTE. Cache commun des assets : `2026.09.27.2`.
+- Frontend principal : `index.html`, styles dans `css/app.css`, sans build.
+  Neuf scripts classiques, dans l’ordre : `state.js`, `ui.js`, `pointage.js`,
+  `planning-storage.js`, `planning-source.js`, `planning.js`, `export-styles.js`,
+  `export.js`, `app.js` (tous dans `js/`). Backend canonique : `flask_app.py`.
+- Les responsabilités et commandes actuelles sont décrites dans le
+  [README](readme.md) et le [PRD](PRD_MAJ.md). Les anciennes consignes ci-dessous
+  décrivent leurs étapes historiques et ne remplacent pas ces documents.
+
+### Persistance du fichier source
+
+- Session, participants et journal conservés dans `localStorage`. Les octets
+  originaux de la source active sont désormais persistés dans IndexedDB
+  (`bad-pointage-source` / `sources` / `active`), avec SHA-256 et métadonnées.
+- Après F5, restauration automatique, contrôle d’intégrité, de l’identité de
+  source et de la cible de session, puis réactivation de l’export. L’exigence
+  systématique de réimport décrite le 09/09 est donc obsolète.
+- Si le cache manque, est indisponible ou incompatible, réimporter la source
+  sans redémarrer la session ; les pointages restent conservés. En cas d’échec
+  de sauvegarde, le fichier reste utilisable en mémoire pendant la session.
+- Anciennes sessions sans hash : rattachement après réimport et comparaison
+  de la date et des participants. Reset efface source et données métier ;
+  les opérations asynchrones obsolètes ne réinstallent pas une ancienne source.
+- Le badge Nouveau est dérivé du vert uni explicite en B/C/D et reste indépendant
+  de la présence et du statut ESSAI ; il est enrichi à la restauration compatible.
+
+### Diagnostic et correctifs d’export
+
+- Le diagnostic réel du PILOTE confirme l’absence de perte de présence :
+  P032 → G33 = `V`, P033 → G34 = `V`, P034 → G35 = `V`.
+  Le style déjà présent dans la source rendait le marqueur de G35 invisible.
+  Une divergence de backend déployé n’a pas été démontrée comme cause.
+- Contrat frontend conservé : `{id, nom, prenom}`. L’index SheetJS contenu dans
+  l’ID est en base 0 ; `P034` vise la ligne openpyxl 35. Validation de l’ID,
+  de la ligne admissible et de l’identité avant écriture ; nom/prénom seuls
+  acceptés uniquement pour les anciennes entrées sans ID.
+- Pour `V`, `ESSAI PRESENT`, `ESSAI ABSENT`, contraste < 4,5:1 sur fond connu :
+  changer seulement la couleur de police en noir ou blanc selon le meilleur
+  contraste, en résolvant les couleurs du thème. Sinon laisser le style intact.
+- Backend : copie de la police openpyxl ; autres propriétés conservées.
+  Fallback XLSX : modification du XML de la feuille dans l’archive source et
+  ajout des seuls styles dérivés nécessaires, sans réécriture globale par
+  SheetJS CE. Les styles sont désormais préservés dans ce parcours local.
+- ESSAI, arrêt LISTE D’ATTENTE, effacement des absents et garde-fous source/session
+  conservés. L’ancienne limite de `sheet_add_aoa([[null]])` ne s’applique plus
+  à l’effacement local actuel.
+- Limites : couleurs non résolubles et fonds non uniformes non recolorés,
+  rendu conditionnel non évalué ; ancien `.xls` local toujours converti avec
+  perte des styles annoncée. IndexedDB reste un stockage navigateur effaçable.
+
+### Tests automatisés du run de développement
+
+- Dernier run avant clôture : **45 tests frontend et 9 tests backend réussis**,
+  sans test ignoré lorsque `BAD_POINTAGE_REFERENCE` désigne le classeur réel.
+- Couverture : P032/P033/P034, ID valide/invalide/incompatible, legacy,
+  styles/contraste, ESSAI, attente, fallback, IndexedDB/F5, source et opérations
+  concurrentes. Bundle navigateur SheetJS 0.18.5 exercé avec un harnais de test.
+- Contrôles facultatifs du vrai classeur réussis côté backend et fallback :
+  marqueurs présents et contraste calculé suffisant, sans affichage d’identités.
+- Ces contrôles automatisés ne constituent pas une validation UI.
+
+### Validation réelle du PILOTE
+
+- Local avec backend : **OK**, y compris F5.
+- Local sans backend : **export XLSX fallback OK, styles préservés**.
+- PythonAnywhere : nouveau `flask_app.py` en place, **`/health` OK**.
+- GitHub Pages : **déployé depuis `main` au commit `892a8d8`**.
+- Production Edge : **nouveau frontend + nouveau backend OK**.
+- Export réel : **trois marqueurs visibles, fichier `maj_...` OK**.
+- **Safari iPhone : OK**.
+
+Ces validations UI sont rapportées par le PILOTE, et non déduites des tests.
+La clôture actuelle modifie uniquement `readme.md`, `PRD_MAJ.md` et
+`journal_dev.md`, après lecture du code réel. Les modifications préexistantes
+hors documentation restent intactes ; aucun commit, push ni déploiement n’est
+effectué par cette intervention. Les suites métier ne sont pas rejouées pour
+cette seule mise à jour documentaire.
+
+---
+
+**Historique conservé :** les entrées suivantes décrivent les états antérieurs.
+Leurs mentions de source uniquement en mémoire, de réimport obligatoire après
+F5 ou de perte des styles XLSX locaux sont remplacées par l’état du 27/09 ci-dessus.
+
 ## 09/09/2026 — Production déployée et validée
 
 - Déploiement terminé et validation manuelle confirmée par le pilote.
