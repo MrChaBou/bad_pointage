@@ -42,7 +42,7 @@ function loadDataFromStorage() {
  */
 async function resetAll() {
     if (!accessAllowed()) return;
-    if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) {
+    if (confirm("Réinitialiser ? Le journal et le pointage seront perdus.")) {
         await resetPlanningApplication();
     }
 }

@@ -32,7 +32,7 @@ function planningSessionDate(workbook, session) {
 function planningCompatibilityError(workbook, session) {
     if (!workbook.Sheets[session.sheet] || !Number.isInteger(session.columnIndex) ||
         session.columnIndex < 0 || !Number.isInteger(session.headerRow) || session.headerRow < 0) {
-        return 'Planning incompatible avec la session.';
+        return 'Planning incompatible avec le créneau.';
     }
     const date = planningSessionDate(workbook, session);
     const label = date?.toLocaleDateString('fr-FR', {
@@ -40,7 +40,7 @@ function planningCompatibilityError(workbook, session) {
     });
     if (!date || label !== session.dateLabel ||
         (session.dateISO && date.toISOString().slice(0, 10) !== session.dateISO)) {
-        return 'Planning incompatible avec la date de la session.';
+        return 'Planning incompatible avec la date du créneau.';
     }
     return '';
 }
@@ -77,12 +77,12 @@ function enrichRestoredParticipants(workbook, session) {
 function getPlanningExportError() {
     if (!accessAllowed()) return "Authentification requise.";
     if (planningResetting) return 'Réinitialisation en cours…';
-    if (!activeSession) return 'Démarrez une session avant d’exporter.';
+    if (!activeSession) return 'Démarrez le pointage avant d’exporter.';
     if (planningBusy) return 'Chargement du planning source…';
-    const reload = `Rechargez le planning source « ${activeSession.planningFileName} » dans Créneau, sans redémarrer la session. Vos pointages sont conservés.`;
+    const reload = `Rechargez le planning source « ${activeSession.planningFileName} » dans Créneau, sans redémarrer le pointage. Vos pointages sont conservés.`;
     if (!planningFileContent?.byteLength || !planningWorkbook || !planningSource) return reload;
     if (!activeSession.sourceHash || planningSource.sha256 !== activeSession.sourceHash) {
-        return `Ce fichier n’est pas la source de la session active. ${reload}`;
+        return `Ce fichier n’est pas la source du pointage en cours. ${reload}`;
     }
     const error = planningCompatibilityError(planningWorkbook, activeSession);
     return error ? `${error} ${reload}` : '';
@@ -121,6 +121,7 @@ async function loadPlanning(file) {
     if (!file || planningResetting) return;
     const operation = ++planningOperation;
     planningBusy = true;
+    updateStartButton();
     planningStorageMessage = '';
     planningSource = planningWorkbook = planningFileContent = null;
     document.getElementById('planningConfig').classList.add('hidden');
@@ -147,7 +148,7 @@ async function loadPlanning(file) {
             enrichRestoredParticipants(workbook, activeSession);
             void persistSessionSource(source, activeSession);
         } else if (activeSession) {
-            planningStorageMessage = 'Autre planning chargé : la source sauvegardée de la session reste inchangée. Démarrez une nouvelle session pour utiliser ce fichier.';
+            planningStorageMessage = 'Autre planning chargé : la source sauvegardée du pointage reste inchangée. Démarrez un nouveau pointage pour utiliser ce fichier.';
         }
     } catch {
         if (operation !== planningOperation) return;
@@ -155,6 +156,7 @@ async function loadPlanning(file) {
     } finally {
         if (operation === planningOperation) {
             planningBusy = false;
+            updateStartButton();
             updatePlanningExportUI();
             // Permet de sélectionner à nouveau le même fichier après un échec.
             document.getElementById('planningFile').value = '';
@@ -169,6 +171,7 @@ async function restorePlanningSource() {
     const operation = ++planningOperation;
     const isCurrent = () => operation === planningOperation && activeSession === session;
     planningBusy = true;
+    updateStartButton();
     updatePlanningExportUI();
     try {
         if (localStorage.getItem(planningResetKey) || !session.sourceHash) {
@@ -195,6 +198,7 @@ async function restorePlanningSource() {
     } finally {
         if (isCurrent()) {
             planningBusy = false;
+            updateStartButton();
             updatePlanningExportUI();
         }
     }

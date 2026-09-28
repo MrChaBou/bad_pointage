@@ -14,14 +14,14 @@ function switchTab(tab) {
     ['pointage', 'participants', 'journal', 'creneau'].forEach(t => {
         document.getElementById(t + 'Section').classList.add('hidden');
         const tabBtn = document.getElementById(t + 'Tab');
-        tabBtn.classList.remove('bg-purple-600', 'text-white');
+        tabBtn.classList.remove('bacly-primary', 'text-white');
         tabBtn.classList.add('text-gray-600');
     });
 
     // Afficher la section active et mettre à jour le style du bouton
     document.getElementById(tab + 'Section').classList.remove('hidden');
     const activeTabBtn = document.getElementById(tab + 'Tab');
-    activeTabBtn.classList.add('bg-purple-600', 'text-white');
+    activeTabBtn.classList.add('bacly-primary', 'text-white');
     activeTabBtn.classList.remove('text-gray-600');
 
     // Mettre à jour l'affichage selon l'onglet
@@ -50,6 +50,7 @@ function updateUI() {
         document.getElementById('sessionActiveCreneau').classList.add('hidden');
     }
     updatePlanningExportUI();
+    updateStartButton();
 
     // Mise à jour du journal
     const sessionKey = activeSession ? `${activeSession.sheet}_${activeSession.dateLabel}` : null;
@@ -77,4 +78,12 @@ function updatePlanningExportUI() {
     document.getElementById('downloadBtn').disabled = !!error;
     document.getElementById('downloadMessage').textContent = activeSession ? error : '';
     document.getElementById('planningStorageStatus').textContent = planningStorageMessage;
+}
+
+// Disponibilité visuelle seulement : startSession conserve sa validation serveur.
+function updateStartButton() {
+    const button = document.getElementById('startPointageButton');
+    button.disabled = !accessAllowed() || planningBusy || planningResetting ||
+        !planningWorkbook || !planningSource ||
+        !document.getElementById('sheetSelect').value || !document.getElementById('dateSelect').value;
 }

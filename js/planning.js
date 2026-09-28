@@ -12,6 +12,7 @@ function loadSheets() {
         select.appendChild(option);
     });
     document.getElementById('dateSelect').innerHTML = '<option value="">Sélectionnez une date...</option>';
+    updateStartButton();
 }
 
 /**
@@ -42,7 +43,7 @@ function loadDates() {
     const sheetName = document.getElementById('sheetSelect').value;
     const dateSelect = document.getElementById('dateSelect');
     dateSelect.innerHTML = '<option value="">Sélectionnez une date...</option>';
-    if (!sheetName) return;
+    if (!sheetName) { updateStartButton(); return; }
 
     const uniqueDates = getPlanningDates(planningWorkbook, sheetName);
 
@@ -62,6 +63,7 @@ function loadDates() {
             option.selected = true;
         }
     });
+    updateStartButton();
 }
 
 // Même détection pour la sélection et la vérification des anciennes sessions.
@@ -177,7 +179,7 @@ async function startSession() {
     void persistSessionSource(planningSource, activeSession);
     resetPointingInterface();
     updateUI();
-    alert(`Session démarrée. ${players.length} participants chargés. La liste d'attente a été ignorée.`);
+    alert(`Pointage démarré. ${players.length} participants chargés. La liste d'attente a été ignorée.`);
     switchTab('participants');
 }
 

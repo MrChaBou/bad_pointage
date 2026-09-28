@@ -15,3 +15,38 @@
         }
         .feedback-slide { animation: slideIn 0.3s ease-out; }
     
+/* Identité BACLY ; les couleurs de succès, avertissement et danger restent sémantiques. */
+:root {
+    --bacly-blue: #3F4096;
+    --bacly-red: #EE3338;
+    --bacly-blue-light: #EEEEF7;
+}
+h1 { color: var(--bacly-blue); }
+h1::after {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin: .75rem auto 0;
+    background: var(--bacly-red);
+    border-radius: 2px;
+}
+.bacly-primary { background-color: var(--bacly-blue); color: #fff; }
+.bacly-primary:hover:not(:disabled) { background-color: #303175; }
+.bacly-primary:disabled { opacity: .5; cursor: not-allowed; }
+.bacly-border { border-color: #CCCCE5; }
+.bacly-focus:focus { border-color: var(--bacly-blue); --tw-ring-color: var(--bacly-blue); }
+button:focus-visible { outline: 3px solid var(--bacly-blue); outline-offset: 3px; }
+.access-footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #DDDDEB; }
+.bacly-logout {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    padding: .75rem 1rem;
+    border: 2px solid var(--bacly-blue);
+    border-radius: .75rem;
+    color: var(--bacly-blue);
+    background: #fff;
+    font-weight: 600;
+}
+.bacly-logout:hover { background: var(--bacly-blue-light); }
