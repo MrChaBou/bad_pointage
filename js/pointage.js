@@ -204,7 +204,7 @@ function searchPlayerDynamic(e) {
 
         return `
             <div data-search-id="${escapeHTML(p.id)}" 
-                 class="${bgColor} p-4 cursor-pointer hover:bg-purple-50 active:bg-purple-100 transition-colors flex items-center gap-3">
+                 class="${bgColor} p-4 cursor-pointer bacly-search-result transition-colors flex items-center gap-3">
                 ${checkIcon}
                 <div class="flex-1">
                     <p class="font-semibold text-base">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</p>

@@ -21,7 +21,7 @@
     --bacly-red: #EE3338;
     --bacly-blue-light: #EEEEF7;
 }
-h1 { color: var(--bacly-blue); }
+h1.bacly-title { color: var(--bacly-blue); }
 h1::after {
     content: '';
     display: block;
@@ -50,3 +50,6 @@ button:focus-visible { outline: 3px solid var(--bacly-blue); outline-offset: 3px
     font-weight: 600;
 }
 .bacly-logout:hover { background: var(--bacly-blue-light); }
+
+.bacly-search-result:hover { background-color: var(--bacly-blue-light); }
+.bacly-search-result:active { background-color: #DDDDEE; }
