@@ -4,6 +4,7 @@ from io import BytesIO
 import os
 from pathlib import Path
 import unittest
+from auth_support import authenticated_client
 
 import openpyxl
 from openpyxl.styles import Alignment, Border, Color, Font, PatternFill, GradientFill, Side
@@ -15,9 +16,10 @@ from flask_app import (app, planning_theme_colors, planning_color_rgb,
 def post_export(workbook, sheet, column, presences):
     data = BytesIO()
     workbook.save(data)
-    result = app.test_client().post('/update-planning', json={
-        'file': base64.b64encode(data.getvalue()).decode(),
-        'sheet': sheet, 'columnIndex': column, 'presences': presences})
+    with authenticated_client() as client:
+        result = client.post('/update-planning', json={
+            'file': base64.b64encode(data.getvalue()).decode(),
+            'sheet': sheet, 'columnIndex': column, 'presences': presences})
     if result.status_code != 200:
         raise AssertionError('Export backend refusé')
     return openpyxl.load_workbook(BytesIO(base64.b64decode(result.json['file'])))

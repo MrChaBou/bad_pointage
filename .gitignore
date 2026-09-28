@@ -12,3 +12,9 @@ old_doc/
 En ligne/
 # Dépendances des tests synthétiques
 tests/node_modules/
+
+# Etat auth prive (doit aussi rester hors du depot en production)
+auth-state.json*
+.auth-*.tmp
+.env
+.env.*

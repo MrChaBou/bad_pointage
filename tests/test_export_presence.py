@@ -6,10 +6,14 @@ from unittest.mock import patch
 import openpyxl
 from openpyxl.styles import PatternFill, Font
 from flask_app import app
+from auth_support import authenticated_client
 
 
 class ExportPresenceTests(unittest.TestCase):
     def setUp(self):
+        context = authenticated_client()
+        self.client = context.__enter__()
+        self.addCleanup(context.__exit__, None, None, None)
         self.wb = openpyxl.Workbook()
         self.ws = self.wb.active
         self.ws.title = 'Créneau'
@@ -38,7 +42,7 @@ class ExportPresenceTests(unittest.TestCase):
     def export(self, presences):
         source = BytesIO()
         self.wb.save(source)
-        return app.test_client().post('/update-planning', json=dict(
+        return self.client.post('/update-planning', json=dict(
             file=base64.b64encode(source.getvalue()).decode(), sheet='Créneau',
             columnIndex=4, presences=presences, filename='maj_test.xlsx'))
 

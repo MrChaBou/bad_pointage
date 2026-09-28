@@ -2,6 +2,10 @@
 
 import base64
 import re
+import os
+from functools import wraps
+import auth
+from auth_store import StoreUnavailable
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import openpyxl
@@ -92,15 +96,73 @@ def ensure_marker_contrast(cell, themes, indexed=COLOR_INDEX):
 
 
 app = Flask(__name__)
+app.config['BAD_POINTAGE_AUTH_FILE'] = os.environ.get('BAD_POINTAGE_AUTH_FILE')
 
 # Origines autorisées : serveurs frontend locaux et GitHub Pages.
 CORS(app, origins=[
     'http://127.0.0.1:8000',
     'http://localhost:8000',
     'https://mrchabou.github.io',
-])
+], allow_headers=['Authorization', 'Content-Type'],
+   expose_headers=['Retry-After'], methods=['GET', 'POST', 'OPTIONS'])
+
+def responsible_token():
+    header = request.headers.get('Authorization', '')
+    match = re.fullmatch(r'(?i:Bearer) ([A-Za-z0-9_-]{43})', header)
+    if not match:
+        raise auth.Unauthorized()
+    return match.group(1)
+
+
+def require_responsible(view):
+    @wraps(view)
+    def guarded(*args, **kwargs):
+        auth.session(app.config.get('BAD_POINTAGE_AUTH_FILE'), responsible_token())
+        return view(*args, **kwargs)
+    return guarded
+
+
+@app.errorhandler(auth.Unauthorized)
+def unauthorized(_error):
+    response = jsonify(error='unauthorized')
+    response.status_code = 401
+    response.headers['WWW-Authenticate'] = 'Bearer'
+    return response
+
+
+@app.errorhandler(auth.RateLimited)
+def rate_limited(error):
+    response = jsonify(error='too_many_attempts')
+    response.status_code = 429
+    response.headers['Retry-After'] = str(error.retry_after)
+    return response
+
+
+@app.errorhandler(StoreUnavailable)
+def auth_unavailable(_error):
+    return jsonify(error='auth_unavailable'), 503
+
+
+@app.after_request
+def private_responses(response):
+    if request.path.startswith('/auth/') or request.path == '/update-planning':
+        response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.route('/auth/session', methods=['GET'])
+def auth_session():
+    return jsonify(auth.session(app.config.get('BAD_POINTAGE_AUTH_FILE'), responsible_token()))
+
+
+@app.route('/auth/logout', methods=['POST'])
+def auth_logout():
+    auth.session(app.config.get('BAD_POINTAGE_AUTH_FILE'), responsible_token(), revoke=True)
+    return '', 204
+
 
 @app.route('/update-planning', methods=['POST'])
+@require_responsible
 def update_planning():
     try:
         data = request.json
@@ -178,10 +240,9 @@ def update_planning():
             'filename': data.get('filename', 'planning_mis_a_jour.xlsx')
         })
         
-    except Exception as e:
-        # En cas d'erreur, renvoyer un message clair
-        app.logger.error(f"Erreur lors du traitement: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception:
+        app.logger.error('Echec du traitement du planning')
+        return jsonify({'success': False, 'error': 'Export impossible'}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
