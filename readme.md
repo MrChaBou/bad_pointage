@@ -2,6 +2,11 @@
 
 Une application web 100% mobile pour simplifier le pointage des présences lors des séances de badminton et automatiser la mise à jour des plannings Excel, **avec préservation des styles XLSX via le backend Python ou le fallback local**.
 
+**Incrément Drive local (28/09/2026, non déployé)** : chargement explicite du
+XLSX central après authentification, sans pointage actif ; secours manuel conservé.
+Contrat binaire, configuration future et recette : [docs/drive-source.md](docs/drive-source.md).
+Aucune clé Google réelle créée ou installée. Assets locaux : `2026.09.28.5`.
+
 Production : https://mrchabou.github.io/bad_pointage/
 
 **État au 27/09/2026 : production déployée au commit `892a8d8` sur `main`.**

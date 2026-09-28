@@ -152,7 +152,8 @@ async function startSession() {
 
     const extractedAllParticipants = extractPlanningParticipants(worksheet, columnIndex, dateColumns);
 
-    if (extractedAllParticipants.length === 0) {
+    if (extractedAllParticipants.length === 0 ||
+        (planningSource.origin === 'drive' && extractedAllParticipants.some(p => !p.nom || !p.prenom))) {
         alert("Aucun joueur trouvé. Vérifiez le format du fichier.");
         return;
     }
@@ -170,7 +171,10 @@ async function startSession() {
         columnIndex: columnIndex,
         headerRow: parseInt(row),
         planningFileName: planningSource.name,
-        sourceHash: planningSource.sha256
+        sourceHash: planningSource.sha256,
+        sourceSize: planningSource.size,
+        sourceOrigin: planningSource.origin || 'manual',
+        ...(planningSource.drive ? { sourceDrive: { ...planningSource.drive } } : {})
     };
 
     ++planningOperation;

@@ -1,12 +1,13 @@
 # flask_app.py (à mettre sur PythonAnywhere)
 
 import base64
+import json
 import re
 import os
 from functools import wraps
 import auth
 from auth_store import StoreUnavailable
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import openpyxl
 from io import BytesIO
@@ -98,13 +99,17 @@ def ensure_marker_contrast(cell, themes, indexed=COLOR_INDEX):
 app = Flask(__name__)
 app.config['BAD_POINTAGE_AUTH_FILE'] = os.environ.get('BAD_POINTAGE_AUTH_FILE')
 
+for key in ('BAD_POINTAGE_DRIVE_FILE_ID', 'BAD_POINTAGE_GOOGLE_CREDENTIALS_FILE'):
+    app.config[key] = os.environ.get(key)
+app.config['BAD_POINTAGE_DRIVE_MAX_BYTES'] = os.environ.get('BAD_POINTAGE_DRIVE_MAX_BYTES', 10 * 1024 * 1024)
+
 # Origines autorisées : serveurs frontend locaux et GitHub Pages.
 CORS(app, origins=[
     'http://127.0.0.1:8000',
     'http://localhost:8000',
     'https://mrchabou.github.io',
 ], allow_headers=['Authorization', 'Content-Type'],
-   expose_headers=['Retry-After'], methods=['GET', 'POST', 'OPTIONS'])
+   expose_headers=['Retry-After', 'X-Planning-Metadata'], methods=['GET', 'POST', 'OPTIONS'])
 
 def responsible_token():
     header = request.headers.get('Authorization', '')
@@ -145,7 +150,7 @@ def auth_unavailable(_error):
 
 @app.after_request
 def private_responses(response):
-    if request.path.startswith('/auth/') or request.path == '/update-planning':
+    if request.path.startswith('/auth/') or request.path in ('/update-planning', '/planning-source'):
         response.headers['Cache-Control'] = 'no-store'
     return response
 
@@ -167,6 +172,21 @@ def auth_session():
 def auth_logout():
     auth.session(app.config.get('BAD_POINTAGE_AUTH_FILE'), responsible_token(), revoke=True)
     return '', 204
+
+
+@app.route('/planning-source', methods=['GET'])
+@require_responsible
+def planning_source():
+    import drive_source
+
+    try:
+        data, metadata = drive_source.download(app.config)
+        response = Response(data, mimetype=drive_source.MIME)
+        response.headers['X-Planning-Metadata'] = json.dumps(metadata, ensure_ascii=True, separators=(',', ':'))
+        return response
+    except drive_source.DriveError as error:
+        app.logger.warning('Lecture Drive: %s', error.code)
+        return jsonify(error=error.code), error.status
 
 
 @app.route('/update-planning', methods=['POST'])

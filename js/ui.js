@@ -82,6 +82,9 @@ function updatePlanningExportUI() {
 
 // Disponibilité visuelle seulement : startSession conserve sa validation serveur.
 function updateStartButton() {
+    const driveButton = document.getElementById('loadCentralPlanningButton');
+    driveButton.hidden = !!activeSession;
+    driveButton.disabled = !accessAllowed() || !!activeSession || planningBusy || planningResetting;
     const button = document.getElementById('startPointageButton');
     button.hidden = !!activeSession;
     button.disabled = !!activeSession || !accessAllowed() || planningBusy || planningResetting ||

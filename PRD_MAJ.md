@@ -869,3 +869,23 @@ Aucun de ces choix ne doit remettre en cause les principes validés :
 - pas de perte automatique du pointage lors d'un échec d'envoi ;
 - solution mail gratuite au volume attendu ;
 - UI légère et non ambiguë.
+
+
+## Incrément Drive local du 28/09/2026 — état d'implémentation
+
+Sur décision PILOTE, première tranche limitée au chargement explicite après
+authentification, sans pointage actif. Le chargement automatique reste ultérieur.
+Le fichier central du Shared Drive est partagé directement en Lecteur au compte
+de service dédié (confirmation PILOTE). Aucun rôle IAM projet ni délégation.
+
+Implémentation : route Bearer `/planning-source`, XLSX binaire et métadonnées dans
+un en-tête CORS, lectures `files.get` avec `supportsAllDrives=true`, fileId imposé
+côté backend. Champs documentés sélectionnés explicitement, dont `version`,
+`modifiedTime`, `md5Checksum` et `headRevisionId` optionnel ; aucun champ supposé
+`revisionId`. Source figée pendant le pointage, aucun accès Drive à l'export.
+Import manuel et export local conservés. Aucun ajout mail, Admin ou changement
+de créneau. Contrat et limites : [docs/drive-source.md](docs/drive-source.md).
+
+Tests simulés uniquement : aucun secret Google créé/installé, aucune configuration
+PythonAnywhere ni recette UI PILOTE pour cet incrément. La création/dépose d'une
+clé JSON exige une décision explicite distincte avant le premier test réel.

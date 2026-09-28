@@ -1,5 +1,31 @@
 # Journal de développement — Bad Pointage
 
+## 28/09/2026 — Premier incrément Drive local, sans clé réelle
+
+- Autorisation PILOTE : compte de service Lecteur d'un fichier du Shared Drive,
+  chargement explicite après authentification, uniquement sans pointage actif.
+- Nouvelle route Bearer `/planning-source` : XLSX binaire inchangé, métadonnées
+  JSON ASCII dans `X-Planning-Metadata` exposé par CORS ; `no-store`.
+- Trois lectures `files.get` avec `supportsAllDrives=true`, champs explicites,
+  contrôle version/MD5/taille, SHA-256 calculé ; aucun champ supposé `revisionId`.
+- Pipeline d'import partagé, conservation des métadonnées et octets dans IndexedDB,
+  source figée, pas de Drive à l'export ; import manuel conservé comme secours.
+- Dépendances locales épinglées : google-auth 2.58.1 et requests 2.34.2 (Python
+  >= 3.10). Import Google différé à la route Drive pour préserver le démarrage
+  des routes existantes. Cache frontend `2026.09.28.5`.
+- Suites synthétiques : frontend 70 tests, 68 réussis / 2 références réelles
+  facultatives ignorées ; backend 36 tests, 35 réussis / 1 référence réelle ignorée.
+  `pip check` sans conflit. Les nouvelles couvertures Drive comprennent 9 tests
+  frontend et 11 tests backend, avec sous-cas d'erreurs et sans transport Google réel.
+- Premier passage : deux assertions frontend devenues obsolètes (libellé/cache),
+  corrigées ; un test multiprocessus auth a dépassé son délai de démarrage. Après
+  import différé des bibliothèques Google, les 16 tests auth puis la suite backend
+  complète ont réussi. Aucun changement du mécanisme d'authentification.
+- Aucune clé Google réelle créée/installée, aucune configuration PythonAnywhere,
+  aucun commit/push. Tests automatisés uniquement, aucune validation UI PILOTE.
+- Contrat, limites et prérequis du premier essai réel : [docs/drive-source.md](docs/drive-source.md).
+
+
 ## 27/09/2026 — Clôture du run, production validée au commit 892a8d8
 
 ### Référence et architecture

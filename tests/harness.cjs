@@ -70,7 +70,7 @@ function boot(options = {}) {
         }
     }
     const context = vm.createContext({
-        console, ArrayBuffer, Uint8Array, Blob, FileReader, crypto: webcrypto,
+        console, AbortController, ArrayBuffer, Uint8Array, Blob, FileReader, crypto: webcrypto,
         DOMParser, XMLSerializer, TextEncoder, TextDecoder, URL,
         indexedDB, localStorage, sessionStorage, setTimeout: (fn, ms) => {
             const timer = setTimeout(fn, ms === 3000 ? 0 : (ms === 5000 && options.fastStorageTimeout ? 20 : ms));
@@ -84,6 +84,7 @@ function boot(options = {}) {
         XLSX: { ...XLSX, write() { throw new Error('Production must not serialize the source'); } },
         atob: value => Buffer.from(value, 'base64').toString('binary'),
         fetch: async (url, request) => {
+            if (url.endsWith('/planning-source')) return options.driveFetch(url, request);
             if (url.includes('/auth/')) {
                 authCalls.push({ url, request });
                 if (options.authFetch) return options.authFetch(url, request);

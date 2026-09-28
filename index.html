@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Déploiement frontend : remplacer partout la version commune ?v= dans ce fichier
          à chaque changement CSS/JS. Garder la même version entre deux déploiements. -->
-    <link rel="stylesheet" href="css/app.css?v=2026.09.28.4">
+    <link rel="stylesheet" href="css/app.css?v=2026.09.28.5">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="max-w-md mx-auto px-4 py-6">
@@ -140,9 +140,11 @@
             <div class="bg-white rounded-xl p-6 mb-6 shadow-sm border">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">⚙️ Choisir son créneau</h3>
                 <div class="mb-4">
+                    <button id="loadCentralPlanningButton" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium mb-3">Charger le planning central</button>
                     <input type="file" id="planningFile" accept=".xlsx, .xls" class="hidden">
-                    <button onclick="document.getElementById('planningFile').click()" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium">📊 Charger le planning</button>
+                    <button onclick="document.getElementById('planningFile').click()" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium">Importer un fichier — secours</button>
                     <p id="planningFileName" class="text-xs text-gray-500 mt-2 text-center"></p>
+                    <p id="planningDriveInfo" class="text-xs text-gray-500 mt-2"></p>
                     <p id="planningStorageStatus" role="status" class="text-sm text-gray-600 mt-2"></p>
                 </div>
                 <div id="planningConfig" class="hidden space-y-3">
@@ -176,15 +178,15 @@
         </div>
     </div>
 
-<script src="js/state.js?v=2026.09.28.4"></script>
-<script src="js/auth.js?v=2026.09.28.4"></script>
-<script src="js/ui.js?v=2026.09.28.4"></script>
-<script src="js/pointage.js?v=2026.09.28.4"></script>
-<script src="js/planning-storage.js?v=2026.09.28.4"></script>
-<script src="js/planning-source.js?v=2026.09.28.4"></script>
-<script src="js/planning.js?v=2026.09.28.4"></script>
-<script src="js/export-styles.js?v=2026.09.28.4"></script>
-<script src="js/export.js?v=2026.09.28.4"></script>
-<script src="js/app.js?v=2026.09.28.4"></script>
+<script src="js/state.js?v=2026.09.28.5"></script>
+<script src="js/auth.js?v=2026.09.28.5"></script>
+<script src="js/ui.js?v=2026.09.28.5"></script>
+<script src="js/pointage.js?v=2026.09.28.5"></script>
+<script src="js/planning-storage.js?v=2026.09.28.5"></script>
+<script src="js/planning-source.js?v=2026.09.28.5"></script>
+<script src="js/planning.js?v=2026.09.28.5"></script>
+<script src="js/export-styles.js?v=2026.09.28.5"></script>
+<script src="js/export.js?v=2026.09.28.5"></script>
+<script src="js/app.js?v=2026.09.28.5"></script>
 </body>
 </html>

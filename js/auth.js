@@ -29,7 +29,7 @@ function lockAccess(message = '', removeToken = true) {
         document.getElementById(id).innerHTML = '';
     }
     for (const id of ['playerName', 'playerId', 'feedbackName', 'sessionCreneauText',
-        'sessionDateText', 'activeSessionInfo', 'planningFileName', 'planningStorageStatus', 'downloadMessage']) {
+        'sessionDateText', 'activeSessionInfo', 'planningFileName', 'planningDriveInfo', 'planningStorageStatus', 'downloadMessage']) {
         document.getElementById(id).textContent = '';
     }
     document.getElementById('sheetSelect').innerHTML = '';

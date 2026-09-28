@@ -1,6 +1,7 @@
 window.addEventListener('DOMContentLoaded', init);
 
 function init() {
+    document.getElementById('loadCentralPlanningButton').addEventListener('click', loadCentralPlanning);
     document.getElementById('accessForm').addEventListener('submit', submitAccess);
     document.getElementById('logoutButton').addEventListener('click', logoutAccess);
     document.getElementById('searchInput').addEventListener('input', searchPlayerDynamic);

@@ -96,6 +96,9 @@ function installPlanningSource(source, workbook) {
     document.getElementById('planningFileName').textContent = source.name;
     document.getElementById('planningConfig').classList.remove('hidden');
     loadSheets();
+    const modified = source.drive?.modifiedTime;
+    document.getElementById('planningDriveInfo').textContent = modified && !isNaN(Date.parse(modified))
+        ? `Source Drive modifiée le ${new Date(modified).toLocaleString('fr-FR')}` : '';
 }
 
 async function persistSessionSource(source, session) {
@@ -116,6 +119,93 @@ async function persistSessionSource(source, session) {
     updatePlanningExportUI();
 }
 
+// Les transports manuel et Drive partagent l'analyse et l'identité des octets.
+async function preparePlanningSource(bytes, metadata) {
+    if (!(bytes instanceof ArrayBuffer) || !bytes.byteLength) throw new Error('Fichier vide');
+    const sha256 = await hashPlanningBytes(bytes);
+    if (metadata.origin === 'drive' && (metadata.size !== bytes.byteLength || metadata.sha256 !== sha256)) {
+        throw new Error('Source altérée');
+    }
+    const workbook = XLSX.read(new Uint8Array(bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
+    const source = { ...metadata, version: 1, bytes, sha256, size: bytes.byteLength };
+    return { source, workbook };
+}
+
+const driveMessages = {
+    drive_not_configured: 'Planning central non configuré.',
+    drive_credentials_invalid: 'Connexion au planning central indisponible.',
+    drive_access_denied: 'Accès au planning central refusé.',
+    drive_file_unavailable: 'Planning central introuvable ou inaccessible.',
+    drive_timeout: 'Le planning central met trop de temps à répondre.',
+    drive_unavailable: 'Planning central temporairement indisponible.',
+    planning_invalid: 'Le fichier central est invalide ou incompatible.',
+    drive_source_changed: 'Le planning a changé pendant le chargement. Réessayez.'
+};
+
+async function loadCentralPlanning() {
+    if (!accessAllowed() || activeSession || planningBusy || planningResetting) return;
+    const operation = ++planningOperation, epoch = accessEpoch;
+    const isCurrent = () => operation === planningOperation && epoch === accessEpoch &&
+        accessAllowed() && !activeSession && !planningResetting;
+    planningBusy = true;
+    planningStorageMessage = 'Chargement du planning central…';
+    updateStartButton();
+    updatePlanningExportUI();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 35000);
+    try {
+        const response = await accessRequest('/planning-source', { signal: controller.signal }, accessToken);
+        if (!isCurrent()) return;
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(driveMessages[error.error] || 'Chargement du planning central impossible.');
+        }
+        if (response.headers.get('Content-Type')?.split(';')[0] !==
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') throw new Error(driveMessages.planning_invalid);
+        const metadata = JSON.parse(response.headers.get('X-Planning-Metadata'));
+        if (!metadata || typeof metadata.name !== 'string' || !Number.isSafeInteger(metadata.size) ||
+            metadata.size <= 0 || !/^[a-f0-9]{64}$/.test(metadata.sha256) ||
+            typeof metadata.driveVersion !== 'string' || !/^[0-9]+$/.test(metadata.driveVersion)) {
+            throw new Error(driveMessages.planning_invalid);
+        }
+        const bytes = await response.arrayBuffer();
+        const prepared = await preparePlanningSource(bytes, {
+            name: metadata.name, type: response.headers.get('Content-Type').split(';')[0],
+            origin: 'drive', size: metadata.size, sha256: metadata.sha256,
+            lastModified: Date.parse(metadata.modifiedTime) || 0,
+            drive: { modifiedTime: metadata.modifiedTime, version: metadata.driveVersion,
+                headRevisionId: metadata.headRevisionId, md5Checksum: metadata.md5Checksum }
+        });
+        // Réutiliser l'interprétation métier existante, sans parseur Python concurrent.
+        const usable = prepared.workbook.SheetNames.some(sheet => {
+            const dates = getPlanningDates(prepared.workbook, sheet);
+            const columns = dates.map(date => Number(date.value.split('|')[0]));
+            return columns.some(column => {
+                const participants = extractPlanningParticipants(prepared.workbook.Sheets[sheet], column, columns);
+                return participants.length > 0 && participants.every(p => p.nom && p.prenom);
+            });
+        });
+        if (!usable) {
+            throw new Error(driveMessages.planning_invalid);
+        }
+        if (!isCurrent()) return;
+        installPlanningSource(prepared.source, prepared.workbook);
+        planningStorageMessage = 'Planning central chargé.';
+    } catch (error) {
+        if (!isCurrent()) return;
+        planningStorageMessage = (error.name === 'AbortError' ? driveMessages.drive_timeout :
+            (Object.values(driveMessages).includes(error.message) ? error.message : 'Chargement du planning central impossible.')) +
+            ' Réessayez ou importez un fichier de secours.';
+    } finally {
+        clearTimeout(timer);
+        if (isCurrent()) {
+            planningBusy = false;
+            updateStartButton();
+            updatePlanningExportUI();
+        }
+    }
+}
+
 async function loadPlanning(file) {
     if (!accessAllowed()) return;
     if (!file || planningResetting) return;
@@ -129,13 +219,10 @@ async function loadPlanning(file) {
     updatePlanningExportUI();
     try {
         const bytes = await readPlanningFile(file);
-        const sha256 = await hashPlanningBytes(bytes);
+        const { source, workbook } = await preparePlanningSource(bytes, {
+            name: file.name, origin: 'manual', type: file.type || '', lastModified: file.lastModified || 0 });
+        const sha256 = source.sha256;
         if (operation !== planningOperation) return;
-        if (!bytes.byteLength) throw new Error('Fichier vide');
-        // Donner au parseur une copie : les octets conservés restent intacts.
-        const workbook = XLSX.read(new Uint8Array(bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
-        const source = { version: 1, bytes, sha256, name: file.name,
-            size: bytes.byteLength, type: file.type || '', lastModified: file.lastModified || 0 };
         if (!accessAllowed()) return;
         installPlanningSource(source, workbook);
         const session = activeSession;
@@ -145,6 +232,11 @@ async function loadPlanning(file) {
             saveDataToStorage('badminton_session', activeSession);
         }
         if (activeSession?.sourceHash === sha256 && !planningCompatibilityError(workbook, activeSession)) {
+            if (activeSession.sourceOrigin === 'drive' && activeSession.sourceDrive) {
+                source.origin = 'drive';
+                source.drive = { ...activeSession.sourceDrive };
+                installPlanningSource(source, workbook);
+            }
             enrichRestoredParticipants(workbook, activeSession);
             void persistSessionSource(source, activeSession);
         } else if (activeSession) {
@@ -216,6 +308,7 @@ async function resetPlanningApplication() {
     document.getElementById('planningConfig').classList.add('hidden');
     document.getElementById('planningFile').value = '';
     document.getElementById('planningFileName').textContent = '';
+    document.getElementById('planningDriveInfo').textContent = '';
     resetPointingInterface();
     updateParticipantsUI();
     updateUI();
