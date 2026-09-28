@@ -44,7 +44,10 @@ zéro. Maximum de 1000 sessions conservées ; pas de durée glissante.
 
 ## API
 
-- POST `/auth/login`, JSON `code` : code erroné/malformé 401 ; quota 429 avec
+- POST `/auth/login`, JSON `code` : succès 200 avec `token`, `token_type`,
+  `role`, `expires_at`. Le Bearer brut est transmis uniquement dans cette réponse
+  HTTPS (HTTP loopback pour les tests locaux), jamais journalisé ni persisté.
+  Code erroné/malformé 401 ; quota 429 avec
   Retry-After ; état/configuration indisponible 503.
 - GET `/auth/session`, Authorization Bearer : rôle et échéance absolue UTC Unix.
 - POST `/auth/logout`, Authorization Bearer : révoque ce jeton, 204. Un jeton

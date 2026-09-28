@@ -218,3 +218,20 @@ class AuthTests(unittest.TestCase):
         Path(self.path).symlink_to(real)
         self.assertEqual(self.client.post('/auth/login', json={'code': CODE}).status_code, 503)
         self.assertTrue(real.exists())
+
+    def test_login_returns_new_token_only_once_and_never_caches(self):
+        first = self.client.post('/auth/login', json={'code': CODE})
+        second = self.client.post('/auth/login', json={'code': CODE})
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(set(first.json), {'token', 'token_type', 'role', 'expires_at'})
+        self.assertRegex(first.json['token'], r'^[A-Za-z0-9_-]{43}$')
+        self.assertNotEqual(first.json['token'], second.json['token'])
+        self.assertEqual(first.headers['Cache-Control'], 'no-store')
+        self.assertNotIn('Set-Cookie', first.headers)
+        self.assertNotIn(CODE, first.get_data(as_text=True))
+        token = first.json['token']
+        response = self.client.get('/auth/session', headers=self.headers(token))
+        self.assertNotIn(token, response.get_data(as_text=True))
+        self.assertNotIn(token, Path(self.path).read_text())
+        for path in Path(self.directory.name).iterdir():
+            self.assertNotIn(token.encode(), path.read_bytes())

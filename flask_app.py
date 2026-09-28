@@ -150,6 +150,14 @@ def private_responses(response):
     return response
 
 
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    payload = request.get_json(silent=True)
+    code = payload.get('code') if isinstance(payload, dict) else None
+    token, expires_at = auth.login(app.config.get('BAD_POINTAGE_AUTH_FILE'), code)
+    return jsonify(token=token, token_type='Bearer', role='responsible', expires_at=expires_at)
+
+
 @app.route('/auth/session', methods=['GET'])
 def auth_session():
     return jsonify(auth.session(app.config.get('BAD_POINTAGE_AUTH_FILE'), responsible_token()))
