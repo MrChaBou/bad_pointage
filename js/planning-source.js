@@ -75,10 +75,11 @@ function enrichRestoredParticipants(workbook, session) {
 }
 
 function getPlanningExportError() {
+    if (!accessAllowed()) return "Authentification requise.";
     if (planningResetting) return 'Réinitialisation en cours…';
     if (!activeSession) return 'Démarrez une session avant d’exporter.';
     if (planningBusy) return 'Chargement du planning source…';
-    const reload = `Rechargez le planning source « ${activeSession.planningFileName} » dans Admin, sans redémarrer la session. Vos pointages sont conservés.`;
+    const reload = `Rechargez le planning source « ${activeSession.planningFileName} » dans Créneau, sans redémarrer la session. Vos pointages sont conservés.`;
     if (!planningFileContent?.byteLength || !planningWorkbook || !planningSource) return reload;
     if (!activeSession.sourceHash || planningSource.sha256 !== activeSession.sourceHash) {
         return `Ce fichier n’est pas la source de la session active. ${reload}`;
@@ -88,6 +89,7 @@ function getPlanningExportError() {
 }
 
 function installPlanningSource(source, workbook) {
+    if (!accessAllowed()) return;
     planningSource = source;
     planningFileContent = new Uint8Array(source.bytes);
     planningWorkbook = workbook;
@@ -115,6 +117,7 @@ async function persistSessionSource(source, session) {
 }
 
 async function loadPlanning(file) {
+    if (!accessAllowed()) return;
     if (!file || planningResetting) return;
     const operation = ++planningOperation;
     planningBusy = true;
@@ -132,6 +135,7 @@ async function loadPlanning(file) {
         const workbook = XLSX.read(new Uint8Array(bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
         const source = { version: 1, bytes, sha256, name: file.name,
             size: bytes.byteLength, type: file.type || '', lastModified: file.lastModified || 0 };
+        if (!accessAllowed()) return;
         installPlanningSource(source, workbook);
         const session = activeSession;
         if (session && !session.sourceHash && legacyPlanningMatches(workbook, session)) {
@@ -147,7 +151,7 @@ async function loadPlanning(file) {
         }
     } catch {
         if (operation !== planningOperation) return;
-        planningStorageMessage = 'Lecture du planning impossible. Réimportez le fichier source dans Admin (HTTPS ou localhost requis).';
+        planningStorageMessage = 'Lecture du planning impossible. Réimportez le fichier source dans Créneau (HTTPS ou localhost requis).';
     } finally {
         if (operation === planningOperation) {
             planningBusy = false;
@@ -159,6 +163,7 @@ async function loadPlanning(file) {
 }
 
 async function restorePlanningSource() {
+    if (!accessAllowed()) return;
     if (!activeSession || planningResetting) return;
     const session = activeSession;
     const operation = ++planningOperation;
@@ -179,6 +184,7 @@ async function restorePlanningSource() {
         if (hash !== session.sourceHash) throw new Error('Source altérée');
         const workbook = XLSX.read(new Uint8Array(source.bytes.slice(0)), { type: 'array', cellDates: false, cellStyles: true });
         if (planningCompatibilityError(workbook, session)) throw new Error('Cible incompatible');
+        if (!accessAllowed()) return;
         installPlanningSource(source, workbook);
         enrichRestoredParticipants(workbook, session);
         planningStorageMessage = 'Source restaurée depuis ce navigateur.';
@@ -195,6 +201,7 @@ async function restorePlanningSource() {
 }
 
 async function resetPlanningApplication() {
+    if (!accessAllowed()) return;
     if (planningResetting) return;
     planningResetting = true;
     ++planningOperation;

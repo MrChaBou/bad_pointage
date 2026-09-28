@@ -1,9 +1,17 @@
+// Données Excel/locales : échapper uniquement pour les emplacements texte/attribut HTML.
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+}
+
 // ===================================================================================
 // NAVIGATION & UI
 // ===================================================================================
 function switchTab(tab) {
+    if (!accessAllowed()) return;
     // Masquer toutes les sections et réinitialiser les styles des boutons
-    ['pointage', 'participants', 'journal', 'admin'].forEach(t => {
+    ['pointage', 'participants', 'journal', 'creneau'].forEach(t => {
         document.getElementById(t + 'Section').classList.add('hidden');
         const tabBtn = document.getElementById(t + 'Tab');
         tabBtn.classList.remove('bg-purple-600', 'text-white');
@@ -23,6 +31,7 @@ function switchTab(tab) {
     updateUI();
 }
 function updateUI() {
+    if (!accessAllowed()) return;
     // Mise à jour de l'affichage de la session active
     if (activeSession) {
         document.getElementById('sessionInfo').classList.remove('hidden');
@@ -30,7 +39,7 @@ function updateUI() {
         document.getElementById('sessionDateText').textContent = activeSession.dateLabel;
         document.getElementById('noSessionMessage').classList.add('hidden');
         document.getElementById('searchInput').parentElement.classList.remove('hidden');
-        document.getElementById('sessionActiveAdmin').classList.remove('hidden');
+        document.getElementById('sessionActiveCreneau').classList.remove('hidden');
         document.getElementById('activeSessionInfo').textContent = `${activeSession.sheet} - ${activeSession.dateLabel}`;
     } else {
         document.getElementById('sessionInfo').classList.add('hidden');
@@ -38,7 +47,7 @@ function updateUI() {
         document.getElementById('searchInput').parentElement.classList.add('hidden');
         document.getElementById('playerCard').classList.add('hidden');
         document.getElementById('feedback').classList.add('hidden');
-        document.getElementById('sessionActiveAdmin').classList.add('hidden');
+        document.getElementById('sessionActiveCreneau').classList.add('hidden');
     }
     updatePlanningExportUI();
 
@@ -54,7 +63,7 @@ function updateUI() {
         document.getElementById('journalList').innerHTML = entriesForSession.map(e => `
             <div class="bg-white rounded-xl p-4 shadow-sm border">
                 <div class="flex justify-between items-center">
-                    <h4 class="font-semibold text-lg">${e.prenom} ${e.nom}</h4>
+                    <h4 class="font-semibold text-lg">${escapeHTML(e.prenom)} ${escapeHTML(e.nom)}</h4>
                     <span class="text-xs text-gray-400">${new Date(e.timestamp).toLocaleTimeString('fr-FR')}</span>
                 </div>
             </div>
@@ -63,6 +72,7 @@ function updateUI() {
 }
 
 function updatePlanningExportUI() {
+    if (!accessAllowed()) return;
     const error = getPlanningExportError();
     document.getElementById('downloadBtn').disabled = !!error;
     document.getElementById('downloadMessage').textContent = activeSession ? error : '';

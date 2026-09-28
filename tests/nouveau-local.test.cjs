@@ -23,7 +23,7 @@ test('référence locale : parseur navigateur, témoins et ancienne session rest
         app.run('loadDates()');
         app.get('dateSelect').value = app.get('dateSelect').options.find(o => o.value).value;
         app.get('dateSelect').options.forEach(o => { o.text = o.textContent; });
-        app.run('startSession()');
+        await app.run('startSession()');
         await app.run('planningStorage.read()');
         app.context.witnessSheet = sheetName;
         assert.equal(app.run('isNouveauCreneau(planningWorkbook.Sheets[witnessSheet], 33)'), true);

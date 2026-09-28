@@ -70,7 +70,7 @@ async function setup(bytes, sheetName = 'Créneau', parser) {
     assert.ok(date, 'Date en colonne G');
     app.get('dateSelect').value = date.value;
     app.get('dateSelect').options.forEach(o => { o.text = o.textContent; });
-    app.run('startSession()');
+    await app.run('startSession()');
     await app.run('planningStorage.read()');
     return app;
 }
@@ -141,8 +141,8 @@ test('fallback : couleurs indexées et tint résolus, couleurs inconnues conserv
 test('cache commun incrémenté après 2026.09.27.1', () => {
     const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
     assert.ok(!html.includes('2026.09.27.1'));
-    assert.match(html, /js\/export-styles\.js\?v=2026\.09\.27\.2/);
-    assert.match(html, /js\/export\.js\?v=2026\.09\.27\.2/);
+    assert.match(html, /js\/export-styles\.js\?v=2026\.09\.28\.1/);
+    assert.match(html, /js\/export\.js\?v=2026\.09\.28\.1/);
 });
 
 test('référence locale facultative : marqueurs et contraste des trois témoins',

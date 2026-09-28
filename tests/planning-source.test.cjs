@@ -116,7 +116,7 @@ test('IndexedDB absent : import et export en mémoire restent disponibles', asyn
     app.get('sheetSelect').value = 'Créneau'; app.run('loadDates()');
     app.get('dateSelect').value = '3|0';
     app.get('dateSelect').options.forEach(o => { o.text = o.textContent; });
-    app.run('startSession()');
+    await app.run('startSession()');
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(app.run('getPlanningExportError()'), '');
     assert.match(app.get('planningStorageStatus').textContent, /non sauvegardée/);

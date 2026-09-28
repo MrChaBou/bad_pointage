@@ -34,10 +34,13 @@ function storage() {
         setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) };
 }
 function element() {
+    const classes = new Set();
+    const events = {};
     return {
+        hidden: false, events,
         value: '', textContent: '', disabled: false, options: [], files: [],
-        classList: { add() {}, remove() {} }, parentElement: { classList: { add() {}, remove() {} } },
-        addEventListener() {}, appendChild(option) { this.options.push(option); },
+        classList: { add(...items) { items.forEach(x => classes.add(x)); }, remove(...items) { items.forEach(x => classes.delete(x)); }, contains(x) { return classes.has(x); } }, parentElement: { classList: { add() {}, remove() {} } },
+        addEventListener(type, fn) { events[type] = fn; }, appendChild(option) { this.options.push(option); },
         get innerHTML() { return this.html || ''; },
         set innerHTML(value) { this.html = value; this.options = value.includes('<option') ? [{ value: '', text: '' }] : []; },
         get selectedIndex() { return Math.max(0, this.options.findIndex(o => o.value === this.value)); }
@@ -47,6 +50,9 @@ function boot(options = {}) {
     const elements = new Map();
     const get = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
     const localStorage = options.localStorage || storage();
+    const sessionStorage = options.sessionStorage || storage();
+    const authCalls = [];
+    const expiry = Math.floor(Date.now() / 1000) + 14400;
     const indexedDB = Object.hasOwn(options, 'indexedDB') ? options.indexedDB : new IDBFactory();
     const downloads = [], posts = [], alerts = [];
     let reloads = 0;
@@ -66,14 +72,23 @@ function boot(options = {}) {
     const context = vm.createContext({
         console, ArrayBuffer, Uint8Array, Blob, FileReader, crypto: webcrypto,
         DOMParser, XMLSerializer, TextEncoder, TextDecoder, URL,
-        indexedDB, localStorage, setTimeout: (fn, ms) => setTimeout(fn, ms === 3000 ? 0 : (ms === 5000 && options.fastStorageTimeout ? 20 : ms)), clearTimeout,
+        indexedDB, localStorage, sessionStorage, setTimeout: (fn, ms) => {
+            const timer = setTimeout(fn, ms === 3000 ? 0 : (ms === 5000 && options.fastStorageTimeout ? 20 : ms));
+            if (ms > 60000) timer.unref();
+            return timer;
+        }, clearTimeout,
         alert: text => alerts.push(text), confirm: () => true,
         location: { reload: () => { reloads++; } },
         window: { location: { hostname: 'localhost' }, addEventListener() {} },
-        document: { getElementById: get, createElement: element },
+        document: { getElementById: get, createElement: element, addEventListener() {} },
         XLSX: { ...XLSX, write() { throw new Error('Production must not serialize the source'); } },
         atob: value => Buffer.from(value, 'base64').toString('binary'),
         fetch: async (url, request) => {
+            if (url.includes('/auth/')) {
+                authCalls.push({ url, request });
+                if (options.authFetch) return options.authFetch(url, request);
+                return { ok: true, status: 200, json: async () => ({ role: 'responsible', expires_at: expiry, token: 'A'.repeat(43) }) };
+            }
             if (!request) return { ok: true, json: async () => ({ status: 'ok' }) };
             posts.push(JSON.parse(request.body));
             if (options.exportGate) await options.exportGate.promise;
@@ -81,12 +96,16 @@ function boot(options = {}) {
         }
     });
     const run = code => vm.runInContext(code, context);
-    for (const module of ['state', 'ui', 'pointage', 'planning-storage', 'planning-source', 'planning', 'export-styles', 'export', 'app']) {
+    for (const module of ['state', 'auth', 'ui', 'pointage', 'planning-storage', 'planning-source', 'planning', 'export-styles', 'export', 'app']) {
         run(fs.readFileSync(path.join(__dirname, '..', 'js', module + '.js'), 'utf8'));
     }
     context.captureDownload = (blob, name) => downloads.push({ blob, name });
     run('triggerDownload = captureDownload;');
-    return { context, run, get, localStorage, indexedDB, downloads, posts, alerts,
+    if (options.authenticated !== false) {
+        context.testExpiry = expiry;
+        run("accessToken = 'A'.repeat(43); accessExpiresAt = testExpiry * 1000;");
+    }
+    return { context, run, get, localStorage, sessionStorage, indexedDB, authCalls, downloads, posts, alerts,
         get reloads() { return reloads; },
         load: f => { context.testFile = f; return run('loadPlanning(testFile)'); },
         async start() {
@@ -95,7 +114,7 @@ function boot(options = {}) {
             get('dateSelect').value = '3|0';
             // Browser option.text aliases textContent; our minimal DOM mirrors it here.
             get('dateSelect').options.forEach(o => { o.text = o.textContent; });
-            run('startSession()');
+            await run('startSession()');
             await run('planningStorage.read()');
         }
     };
@@ -107,4 +126,4 @@ async function ready(options = {}) {
     await app.start();
     return { app, bytes };
 }
-module.exports = { boot, ready, file, fixture, deferred, IDBFactory };
+module.exports = { boot, ready, file, fixture, deferred, IDBFactory, storage };

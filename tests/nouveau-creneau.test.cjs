@@ -53,7 +53,7 @@ async function setup() {
     app.run('loadDates()');
     app.get('dateSelect').value = '4|0';
     app.get('dateSelect').options.forEach(o => { o.text = o.textContent; });
-    app.run('startSession()');
+    await app.run('startSession()');
     await app.run('planningStorage.read()');
     return { app, bytes };
 }

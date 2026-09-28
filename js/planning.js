@@ -2,6 +2,7 @@
 // GESTION DU PLANNING
 // ===================================================================================
 function loadSheets() {
+    if (!accessAllowed()) return;
     const select = document.getElementById('sheetSelect');
     select.innerHTML = '<option value="">Sélectionnez un créneau...</option>';
     planningWorkbook.SheetNames.forEach(name => {
@@ -37,6 +38,7 @@ function parseCellAsDate(cellValue, date1904 = false) {
  * Présélectionne automatiquement la date du jour si elle est trouvée
  */
 function loadDates() {
+    if (!accessAllowed()) return;
     const sheetName = document.getElementById('sheetSelect').value;
     const dateSelect = document.getElementById('dateSelect');
     dateSelect.innerHTML = '<option value="">Sélectionnez une date...</option>';
@@ -117,7 +119,20 @@ function isEssaiMarker(value) {
  * Extrait les inscrits et essais admissibles avant LISTE D'ATTENTE
  * Sauvegarde la session dans le stockage local
  */
-function startSession() {
+async function startSession() {
+    if (!accessAllowed()) return;
+    const epoch = accessEpoch, operation = planningOperation;
+    const selectedSheet = document.getElementById('sheetSelect').value;
+    const selectedDate = document.getElementById('dateSelect').value;
+    try {
+        if (!await validateAccessOnServer()) return;
+    } catch {
+        if (epoch === accessEpoch) alert('Serveur indisponible ou accès non confirmé. Nouveau créneau non démarré. Le pointage existant est conservé.');
+        return;
+    }
+    if (epoch !== accessEpoch || operation !== planningOperation || !accessAllowed() ||
+        selectedSheet !== document.getElementById('sheetSelect').value ||
+        selectedDate !== document.getElementById('dateSelect').value) return;
     if (planningBusy || planningResetting || !planningSource || !planningWorkbook) return;
     const sheet = document.getElementById('sheetSelect').value;
     const dateValue = document.getElementById('dateSelect').value;

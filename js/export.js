@@ -7,6 +7,8 @@
  * Met à jour l'interface avec le statut du serveur (OK ou indisponible)
  */
 async function checkBackendStatus() {
+    if (!accessAllowed()) return;
+    const epoch = accessEpoch;
     const statusDiv = document.getElementById('backendStatus');
     const icon = document.getElementById('backendIcon');
     const text = document.getElementById('backendText');
@@ -16,6 +18,7 @@ async function checkBackendStatus() {
         if (!response.ok) throw new Error('Status not OK');
 
         const data = await response.json();
+        if (epoch !== accessEpoch || !accessAllowed()) return;
         if (data.status === 'ok') {
             backendAvailable = true;
             statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-green-50 border-green-200';
@@ -25,6 +28,7 @@ async function checkBackendStatus() {
             throw new Error('Invalid response');
         }
     } catch (error) {
+        if (epoch !== accessEpoch || !accessAllowed()) return;
         backendAvailable = false;
         statusDiv.className = 'flex items-center text-sm mb-4 p-3 rounded-lg bg-yellow-50 border-yellow-200';
         icon.textContent = '⚠️';
@@ -69,7 +73,7 @@ async function downloadPlanning() {
                 reader.readAsDataURL(new Blob([sourceContent]));
             });
             if (!isCurrent()) return;
-            const response = await fetch(`${BACKEND_URL}/update-planning`, {
+            const response = await accessRequest('/update-planning', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -79,12 +83,19 @@ async function downloadPlanning() {
                     presences,
                     filename: `maj_${sourceSession.planningFileName}`
                 })
-            });
+            }, accessToken);
             if (!isCurrent()) return;
-            if (!response.ok) throw new Error('Erreur serveur');
+            if (!response.ok) {
+                if (response.status >= 400 && response.status < 500) {
+                    messageP.textContent = response.status === 429
+                        ? 'Trop de demandes. Réessayez plus tard.' : 'Export refusé par le serveur.';
+                    return;
+                }
+                throw new Error('Panne du serveur');
+            }
             const data = await response.json();
             if (!isCurrent()) return;
-            if (!data.success) throw new Error('Erreur export');
+            if (!data.success) { messageP.textContent = 'Export refusé par le serveur.'; return; }
             const byteArray = Uint8Array.from(atob(data.file), char => char.charCodeAt(0));
             triggerDownload(new Blob([byteArray], {
                 type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -189,6 +200,7 @@ function downloadLocally(presences) {
  * @param {string} filename - Le nom du fichier à télécharger
  */
 function triggerDownload(blob, filename) {
+    if (!accessAllowed()) return;
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

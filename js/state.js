@@ -22,6 +22,7 @@ function saveDataToStorage(key, data) {
 }
 
 function loadDataFromStorage() {
+    if (!accessAllowed()) return;
     try {
         journalEntries = JSON.parse(localStorage.getItem('badminton_journal') || '[]');
         activeSession = JSON.parse(localStorage.getItem('badminton_session') || 'null');
@@ -40,6 +41,7 @@ function loadDataFromStorage() {
  * Supprime toutes les données du stockage local
  */
 async function resetAll() {
+    if (!accessAllowed()) return;
     if (confirm("Réinitialiser ? Le journal et la session seront perdus.")) {
         await resetPlanningApplication();
     }

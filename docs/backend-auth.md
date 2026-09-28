@@ -1,8 +1,9 @@
 # Socle backend responsable — incrément 1
 
-Aucune UI de connexion ni API Admin dans cet incrément. Ne pas déployer ce
-backend avec l'ancien frontend en supposant le parcours sécurisé : il ne fournit
-pas de Bearer et son fallback historique reste actif.
+Le socle est maintenant relié au frontend responsable. La recette locale est
+décrite dans [local-auth-test.md](local-auth-test.md). Aucune API Admin. Ne pas
+déployer un ancien frontend avec ce backend : il ne fournit pas de Bearer et
+son fallback historique ne traite pas les refus d'authentification.
 
 ## Configuration privée
 
@@ -85,3 +86,26 @@ ne pas remplacer implicitement le stockage par SQLite.
 Tests synthétiques export : `python -B -m unittest discover -s tests -p 'test_*.py'`.
 Ils utilisent une vraie connexion de test et un état temporaire isolé, sans
 contournement de la protection en production. Les tests UI restent au PILOTE.
+
+## Contrôles frontend intégrés
+
+`node --test tests/*.test.cjs` couvre le verrouillage initial, la revalidation F5,
+les refus sans fallback, le nouveau créneau soumis au serveur et la conservation
+métier après logout/expiration. Le harness utilise des fixtures authentifiées
+explicites pour les tests métier historiques ; les tests auth démarrent verrouillés.
+
+`tests/browser-auth-check.cjs` est un contrôle optionnel avec Chromium/Playwright
+et le vrai backend Flask : il démarre temporairement les ports 8000/5000 uniquement
+s'ils sont libres, utilise un état privé temporaire et un classeur synthétique,
+puis ferme ses serveurs et supprime cet état. Il ne touche pas au profil navigateur
+du PILOTE. Pour l'exécuter avec une installation Playwright extérieure au projet :
+
+```bash
+BAD_POINTAGE_PLAYWRIGHT_MODULE=/chemin/vers/node_modules/playwright node tests/browser-auth-check.cjs
+```
+
+Si les navigateurs Playwright sont installés hors du chemin standard, définir
+également `PLAYWRIGHT_BROWSERS_PATH`. Ce contrôle fournit le bundle SheetJS local
+et un substitut CSS minimal au CDN Tailwind pour être déterministe : il valide
+le parcours fonctionnel et le verrouillage du DOM, **pas l'apparence graphique**.
+La validation manuelle Edge/Safari iPhone et du vrai Excel reste au PILOTE.

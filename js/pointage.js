@@ -1,3 +1,9 @@
+// Les callbacks d'une ancienne autorisation ne doivent jamais réafficher de données.
+function schedulePointageCallback(callback, delay) {
+    const epoch = accessEpoch;
+    return setTimeout(() => { if (epoch === accessEpoch && accessAllowed()) callback(); }, delay);
+}
+
 // Badge indépendant du statut ESSAI/Inscrit et de la présence.
 function nouveauBadge(player) {
     return player.nouveauCreneau === true
@@ -11,6 +17,7 @@ function nouveauBadge(player) {
  * Permet le pointage/dépointage direct en cliquant sur un participant
  */
 function updateParticipantsUI() {
+    if (!accessAllowed()) return;
     const listDiv = document.getElementById('participantsList');
     const infoDiv = document.getElementById('participantsInfo');
     const countSpan = document.getElementById('participantsCount');
@@ -61,12 +68,12 @@ function updateParticipantsUI() {
         }
 
         return `
-            <div onclick="toggleParticipantPresence('${p.id}')" 
+            <div data-participant-id="${escapeHTML(p.id)}" 
                  class="${bgColor} ${pulseClass} rounded-xl p-4 shadow-sm border-2 ${borderColor} flex justify-between items-center cursor-pointer transition-all hover:shadow-md active:scale-95">
                 <div class="flex items-center gap-3">
                     ${checkIcon}
                     <div>
-                        <h4 class="font-semibold text-base">${p.prenom} ${p.nom}</h4>
+                        <h4 class="font-semibold text-base">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</h4>
                         ${isPointed ? '<p class="text-xs text-green-600 font-medium mt-1">Présent</p>' : ''}
                     </div>
                 </div>
@@ -84,6 +91,7 @@ function updateParticipantsUI() {
  * @param {string} playerId - L'ID du participant à pointer/dépointer
  */
 function toggleParticipantPresence(playerId) {
+    if (!accessAllowed()) return;
     if (!activeSession) return;
 
     // Trouver le participant dans la liste
@@ -123,6 +131,7 @@ function toggleParticipantPresence(playerId) {
  * @param {string} icon - L'icône à afficher
  */
 function showParticipantFeedback(message, color, icon) {
+    if (!accessAllowed()) return;
     const feedback = document.getElementById('participantFeedback');
     const feedbackBox = document.getElementById('participantFeedbackBox');
     const feedbackIcon = document.getElementById('participantFeedbackIcon');
@@ -135,7 +144,7 @@ function showParticipantFeedback(message, color, icon) {
     feedback.classList.remove('hidden');
 
     // Masquer le feedback après 2 secondes
-    setTimeout(() => {
+    schedulePointageCallback(() => {
         feedback.classList.add('hidden');
     }, 2000);
 }
@@ -150,6 +159,7 @@ function showParticipantFeedback(message, color, icon) {
  * La liste permet de sélectionner directement un participant
  */
 function searchPlayerDynamic(e) {
+    if (!accessAllowed()) return;
     const query = e.target.value.toLowerCase().trim();
     const searchResults = document.getElementById('searchResults');
     const searchResultsList = document.getElementById('searchResultsList');
@@ -193,11 +203,11 @@ function searchPlayerDynamic(e) {
         const checkIcon = isPointed ? '<span class="text-green-500 text-xl">✓</span>' : '<span class="text-gray-300 text-xl">○</span>';
 
         return `
-            <div onclick="selectPlayerFromSearch('${p.id}')" 
+            <div data-search-id="${escapeHTML(p.id)}" 
                  class="${bgColor} p-4 cursor-pointer hover:bg-purple-50 active:bg-purple-100 transition-colors flex items-center gap-3">
                 ${checkIcon}
                 <div class="flex-1">
-                    <p class="font-semibold text-base">${p.prenom} ${p.nom}</p>
+                    <p class="font-semibold text-base">${escapeHTML(p.prenom)} ${escapeHTML(p.nom)}</p>
                     ${nouveauBadge(p)}
                     ${isPointed ? '<p class="text-xs text-green-600 font-medium">Déjà pointé</p>' : ''}
                 </div>
@@ -211,6 +221,7 @@ function searchPlayerDynamic(e) {
  * @param {string} playerId - L'ID du joueur sélectionné
  */
 function selectPlayerFromSearch(playerId) {
+    if (!accessAllowed()) return;
     const player = players.find(p => p.id === playerId);
     if (!player) return;
 
@@ -222,6 +233,7 @@ function selectPlayerFromSearch(playerId) {
 }
 
 function showPlayer(player) {
+    if (!accessAllowed()) return;
     document.getElementById('playerBadges').innerHTML = nouveauBadge(player);
     document.getElementById('playerName').textContent = `${player.prenom} ${player.nom}`;
     document.getElementById('playerId').textContent = `ID: ${player.id}`;
@@ -244,6 +256,7 @@ function resetPlayerCard() {
  * Gère le pointage/dépointage depuis la carte joueur
  */
 function togglePresence() {
+    if (!accessAllowed()) return;
     if (!currentPlayer || !activeSession) return;
 
     const sessionKey = `${activeSession.sheet}_${activeSession.dateLabel}`;
@@ -256,7 +269,7 @@ function togglePresence() {
         clearTimeout(cancelTimeout);
 
         // Revenir à la carte du joueur après 1.5 secondes
-        setTimeout(() => {
+        schedulePointageCallback(() => {
             document.getElementById('feedback').classList.add('hidden');
             document.getElementById('playerCard').classList.remove('hidden');
             updatePresenceButton(false);
@@ -274,14 +287,14 @@ function togglePresence() {
         showFeedback('Présence enregistrée !', 'green', '✅');
 
         // Revenir à la carte du joueur après 0.5 secondes
-        setTimeout(() => {
+        schedulePointageCallback(() => {
             document.getElementById('feedback').classList.add('hidden');
             document.getElementById('playerCard').classList.remove('hidden');
             updatePresenceButton(true);
         }, 500);
 
         // Réinitialiser tout après 7 secondes si pas d'action
-        cancelTimeout = setTimeout(() => {
+        cancelTimeout = schedulePointageCallback(() => {
             resetPointingInterface();
         }, 7000);
     }
@@ -295,6 +308,7 @@ function togglePresence() {
  * @param {boolean} isPointed - Indique si le joueur est déjà pointé
  */
 function updatePresenceButton(isPointed) {
+    if (!accessAllowed()) return;
     const content = document.getElementById('presenceButtonContent');
     const iconUnchecked = document.getElementById('iconUnchecked');
     const iconChecked = document.getElementById('iconChecked');
@@ -322,6 +336,7 @@ function updatePresenceButton(isPointed) {
 }
 
 function showFeedback(message, color, icon) {
+    if (!accessAllowed()) return;
     const feedback = document.getElementById('feedback');
     const feedbackBox = document.getElementById('feedbackBox');
     document.getElementById('feedbackIcon').textContent = icon;
