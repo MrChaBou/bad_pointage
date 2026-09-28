@@ -205,3 +205,25 @@ test('réponse tardive de démarrage après logout : aucune nouvelle session mé
     assert.equal(app.localStorage.getItem('badminton_session'), original);
     assert.equal(app.get('application').hidden, true);
 });
+
+test('UI : chargement BACLY et démarrage masqué pendant le pointage, y compris après F5', async () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.match(html, /<button[^>]*class="[^"]*bacly-primary[^"]*"[^>]*>📊 Charger le planning<\/button>/);
+    const { app, bytes } = await ready();
+    app.run('updateUI()');
+    assert.equal(app.get('startPointageButton').hidden, true);
+    assert.equal(app.get('startPointageButton').disabled, true);
+    assert.equal(app.get('sessionActiveCreneau').classList.contains('hidden'), false);
+    assert.match(app.get('activeSessionInfo').textContent, /Créneau/);
+    await app.load(file(bytes));
+    assert.equal(app.get('startPointageButton').hidden, true);
+    const next = boot({ localStorage: app.localStorage, indexedDB: app.indexedDB });
+    next.run('loadDataFromStorage()');
+    await next.run('restorePlanningSource()');
+    next.run('updateUI()');
+    assert.equal(next.get('startPointageButton').hidden, true);
+    assert.equal(next.get('startPointageButton').disabled, true);
+    await next.run('resetAll()');
+    assert.equal(next.get('startPointageButton').hidden, false);
+    assert.equal(next.get('startPointageButton').disabled, true);
+});

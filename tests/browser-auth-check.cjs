@@ -98,7 +98,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         const original = await page.evaluate(() => localStorage.getItem('badminton_session'));
         await page.locator('#sheetSelect').selectOption('Créneau');
         await page.locator('#dateSelect').selectOption('4|0');
-        await page.getByRole('button', { name: 'Démarrer le pointage' }).click();
+        assert.equal(await page.locator('#startPointageButton').isVisible(), false);
+        // La validation serveur reste testée directement : ce bouton ne change plus de créneau.
+        await page.evaluate(() => startSession());
         assert.equal(await page.evaluate(() => localStorage.getItem('badminton_session')), original);
         await page.reload();
         assert.equal(await page.locator('#application').isVisible(), false);

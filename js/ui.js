@@ -83,7 +83,8 @@ function updatePlanningExportUI() {
 // Disponibilité visuelle seulement : startSession conserve sa validation serveur.
 function updateStartButton() {
     const button = document.getElementById('startPointageButton');
-    button.disabled = !accessAllowed() || planningBusy || planningResetting ||
+    button.hidden = !!activeSession;
+    button.disabled = !!activeSession || !accessAllowed() || planningBusy || planningResetting ||
         !planningWorkbook || !planningSource ||
         !document.getElementById('sheetSelect').value || !document.getElementById('dateSelect').value;
 }

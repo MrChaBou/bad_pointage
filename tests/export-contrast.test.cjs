@@ -141,8 +141,8 @@ test('fallback : couleurs indexées et tint résolus, couleurs inconnues conserv
 test('cache commun incrémenté après 2026.09.27.1', () => {
     const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
     assert.ok(!html.includes('2026.09.27.1'));
-    assert.match(html, /js\/export-styles\.js\?v=2026\.09\.28\.3/);
-    assert.match(html, /js\/export\.js\?v=2026\.09\.28\.3/);
+    assert.match(html, /js\/export-styles\.js\?v=2026\.09\.28\.4/);
+    assert.match(html, /js\/export\.js\?v=2026\.09\.28\.4/);
 });
 
 test('référence locale facultative : marqueurs et contraste des trois témoins',
