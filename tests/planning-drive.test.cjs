@@ -154,6 +154,10 @@ test('auth réussie sans source : chargement automatique unique et configuration
     assert.equal(calls, 1);
     assert.equal(app.run('planningSource.origin'), 'drive');
     assert.equal(app.get('planningConfig').classList.contains('hidden'), false);
+    app.run('updateUI()');
+    assert.equal(app.get('loadCentralPlanningButton').hidden, true);
+    assert.equal(app.get('planningStorageStatus').textContent, 'Planning central chargé.');
+    assert.match(app.get('planningDriveInfo').textContent, /Source Drive modifiée le/);
     assert.equal(app.run('activeSession'), null);
     await app.run('logoutAccess();');
     await app.run('submitAccess()');
@@ -176,7 +180,11 @@ test('échec automatique : accès ouvert, relance centrale et secours manuel dis
     assert.equal(app.get('loadCentralPlanningButton').hidden, false);
     await app.get('loadCentralPlanningButton').events.click();
     assert.equal(calls, 2);
+    app.run('updateUI()');
+    assert.equal(app.get('planningConfig').classList.contains('hidden'), false);
+    assert.equal(app.get('planningStorageStatus').textContent, 'Planning central chargé.');
     assert.equal(app.get('planningFallback').hidden, true);
+    assert.equal(app.get('loadCentralPlanningButton').hidden, true);
     assert.equal(app.run('planningSource.origin'), 'drive');
     await app.load(file(fixture('SECOURS FICTIF')));
     assert.equal(app.run('planningSource.origin'), 'manual');
@@ -231,7 +239,7 @@ test('secours : aide native au survol et action centrale de relance', () => {
     const path = require('node:path');
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     assert.match(html, /<button[^>]*title="En cas de problème avec le planning central,[^"]*ne modifie pas le fichier officiel du Drive\."[^>]*>Importer un fichier — secours<\/button>/);
-    assert.match(html, /id="loadCentralPlanningButton"[^>]*>Recharger le planning central<\/button>/);
+    assert.match(html, /id="loadCentralPlanningButton" hidden[^>]*>Réessayer le chargement central<\/button>/);
 });
 
 
@@ -244,7 +252,9 @@ test('secours masqué dans le HTML et pendant le premier chargement central', as
     const app = boot({ driveFetch: async () => { await gate.promise; return response(fixture()); } });
     const pending = app.run('loadCentralPlanning()');
     assert.equal(app.get('planningFallback').hidden, true);
+    assert.equal(app.get('loadCentralPlanningButton').hidden, true);
     gate.resolve();
     await pending;
     assert.equal(app.get('planningFallback').hidden, true);
+    assert.equal(app.get('loadCentralPlanningButton').hidden, true);
 });
