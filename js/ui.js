@@ -74,6 +74,7 @@ function updateUI() {
 
 function updatePlanningExportUI() {
     if (!accessAllowed()) return;
+    updatePointageMailUI();
     const error = getPlanningExportError();
     document.getElementById('downloadBtn').disabled = !!error;
     document.getElementById('downloadMessage').textContent = activeSession ? error : '';

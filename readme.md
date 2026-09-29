@@ -281,3 +281,10 @@ validation UI ; aucune suite métier n’est rejouée pour cette clôture docume
 ---
 
 Développé avec ❤️ par **MrChaBou**.
+
+
+### Retour de pointage par mail (incrément local, recette à faire)
+
+Envoi volontaire du XLSX courant avec note et récapitulatif. Configuration SMTP
+privée, mode test obligatoire pour la recette : [documentation](docs/pointage-mail.md).
+Le téléchargement reste indépendant ; aucun envoi ni Reset automatique.

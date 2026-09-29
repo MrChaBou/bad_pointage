@@ -210,3 +210,99 @@ function triggerDownload(blob, filename) {
     window.URL.revokeObjectURL(url);
     a.remove();
 }
+
+// Envoi volontaire : aucun appel SMTP au chargement, au pointage ou au téléchargement.
+let pointageMailBusy = false;
+function updatePointageMailUI() {
+    const note = document.getElementById('pointageNote');
+    note.disabled = !activeSession;
+    note.value = activeSession?.note || '';
+    document.getElementById('sendPointageBtn').disabled = pointageMailBusy || !!getPlanningExportError();
+    const state = activeSession?.mail?.state;
+    document.getElementById('pointageMailMessage').textContent = pointageMailBusy ? 'Envoi en cours…' : ({
+        sent: 'Dernière tentative : envoyée au serveur mail.',
+        not_sent: 'Envoi non effectué. Vous pouvez réessayer ou télécharger le fichier.',
+        uncertain: 'État incertain. Vérifiez la réception avant de renvoyer.'
+    }[state] || 'Non envoyé.');
+    if (activeSession?.mail?.mode === 'test') {
+        document.getElementById('pointageMailMessage').textContent += ' Mode test.';
+    }
+}
+
+function savePointageNote() {
+    if (!accessAllowed() || !activeSession) return;
+    activeSession.note = document.getElementById('pointageNote').value;
+    saveDataToStorage('badminton_session', activeSession);
+}
+
+async function sendPointage() {
+    if (pointageMailBusy || getPlanningExportError()) return;
+    const session = activeSession, source = planningFileContent, operation = planningOperation;
+    const epoch = accessEpoch;
+    const current = () => session === activeSession && source === planningFileContent &&
+        operation === planningOperation && epoch === accessEpoch && accessAllowed() && !getPlanningExportError();
+    if (['sent', 'uncertain'].includes(session.mail?.state) &&
+        !confirm('Un envoi a déjà été effectué ou son résultat est incertain. Renvoyer le pointage courant peut créer un doublon. Continuer ?')) return;
+    pointageMailBusy = true;
+    savePointageNote();
+    updatePointageMailUI();
+    let submitted = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+        const statusResponse = await accessRequest('/mail-status', { signal: controller.signal }, accessToken);
+        if (!current()) return;
+        if (!statusResponse.ok) throw new Error();
+        const status = await statusResponse.json();
+        if (!current()) return;
+        if (!status.available || !['test', 'production'].includes(status.mode)) throw new Error();
+        if (!confirm(status.mode === 'test' ? 'Mode test : envoyer le XLSX et la note au destinataire de test ?' :
+            'Envoyer le XLSX et la note au destinataire de réconciliation ?')) return;
+        const file = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reader.onabort = () => reject(new Error());
+            reader.readAsDataURL(new Blob([source]));
+        });
+        if (!current()) return;
+        await planningStorage.write(planningSource, current);
+        if (!current()) return;
+        const presences = journalEntries.filter(e => e.session === `${session.sheet}_${session.dateLabel}`)
+            .map(p => ({ ...(p.id === undefined ? {} : { id: p.id }), nom: p.nom, prenom: p.prenom }));
+        const payload = {
+            file, sheet: session.sheet, columnIndex: session.columnIndex, presences,
+            filename: `maj_${session.planningFileName.replace(/[^\p{L}\p{N}_.() -]/gu, '_').replace(/\.(xlsx|xls)$/i, '')}.xlsx`,
+            note: session.note || '', date: session.dateISO || session.dateLabel,
+            sourceHash: session.sourceHash, sourceModified: session.sourceDrive?.modifiedTime || '',
+            participants: players.length, essais: players.filter(p => p.statut === 'ESSAI').length,
+            mode: status.mode, attemptId: crypto.randomUUID()
+        };
+        // Fail closed if the final state cannot be saved. No swallowed storage error here.
+        localStorage.setItem('badminton_journal', JSON.stringify(journalEntries));
+        localStorage.setItem('badminton_all_participants', JSON.stringify(allParticipants));
+        session.mail = { state: 'uncertain', mode: status.mode, attemptId: payload.attemptId,
+            attemptedAt: new Date().toISOString() };
+        localStorage.setItem('badminton_session', JSON.stringify(session));
+        submitted = true;
+        const response = await accessRequest('/send-pointage', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload), signal: controller.signal
+        }, accessToken);
+        // A server result may update the same saved session after auth expires,
+        // but must never resurrect a reset or a replaced session.
+        const result = await response.json();
+        if (activeSession !== session) return;
+        session.mail.state = ['sent', 'not_sent', 'uncertain'].includes(result.state) ? result.state :
+            ([400, 401, 403, 413, 429].includes(response.status) ? 'not_sent' : 'uncertain');
+        localStorage.setItem('badminton_session', JSON.stringify(session));
+    } catch {
+        if (activeSession === session) {
+            session.mail = { ...session.mail, state: submitted ? 'uncertain' : 'not_sent' };
+            saveDataToStorage('badminton_session', session);
+        }
+    } finally {
+        clearTimeout(timeout);
+        pointageMailBusy = false;
+        if (accessAllowed()) updatePointageMailUI();
+    }
+}

@@ -889,3 +889,17 @@ de créneau. Contrat et limites : [docs/drive-source.md](docs/drive-source.md).
 Tests simulés uniquement : aucun secret Google créé/installé, aucune configuration
 PythonAnywhere ni recette UI PILOTE pour cet incrément. La création/dépose d'une
 clé JSON exige une décision explicite distincte avant le premier test réel.
+
+
+## Incrément mail local du 29/09/2026 — à valider par le PILOTE
+
+Envoi volontaire après pointage, note libre persistée (2 000 caractères),
+XLSX généré par le parcours backend existant depuis la source figée et récapitulatif.
+Routes protégées par l'auth responsable, SMTP TLS et destinataires uniquement
+côté backend ; mode test par défaut, confirmation explicite du mode.
+Les états non envoyé / envoyé / incertain et la note sont conservés localement.
+Téléchargement indépendant, aucun Reset automatique et aucune écriture Drive.
+Reçus anti-doublon privés (identifiant, empreinte, état), sans fichier ni note stockés
+sur le serveur. SMTP gratuit et recette réelle restent à valider par le PILOTE.
+Configuration et limites : [docs/pointage-mail.md](docs/pointage-mail.md).
+Aucun envoi réel ni déploiement effectué par CODEX. Cache frontend : `2026.09.29.4`.

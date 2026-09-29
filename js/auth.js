@@ -35,6 +35,8 @@ function lockAccess(message = '', removeToken = true) {
     document.getElementById('sheetSelect').innerHTML = '';
     document.getElementById('dateSelect').innerHTML = '';
     document.getElementById('planningFile').value = '';
+    document.getElementById('pointageNote').value = '';
+    document.getElementById('pointageMailMessage').textContent = '';
     if (removeToken) {
         try { sessionStorage.removeItem(authStorageKey); } catch { /* Accès déjà verrouillé. */ }
     }

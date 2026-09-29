@@ -150,7 +150,7 @@ def auth_unavailable(_error):
 
 @app.after_request
 def private_responses(response):
-    if request.path.startswith('/auth/') or request.path in ('/update-planning', '/planning-source'):
+    if request.path.startswith('/auth/') or request.path in ('/update-planning', '/planning-source', '/send-pointage', '/mail-status'):
         response.headers['Cache-Control'] = 'no-store'
     return response
 
@@ -192,8 +192,11 @@ def planning_source():
 @app.route('/update-planning', methods=['POST'])
 @require_responsible
 def update_planning():
+    return build_planning_response(request.json)
+
+
+def build_planning_response(data):
     try:
-        data = request.json
         
         # 1. Décoder le fichier Excel reçu en base64
         excel_data = base64.b64decode(data['file'])
@@ -271,6 +274,42 @@ def update_planning():
     except Exception:
         app.logger.error('Echec du traitement du planning')
         return jsonify({'success': False, 'error': 'Export impossible'}), 500
+
+@app.route('/mail-status', methods=['GET'])
+@require_responsible
+def mail_status():
+    import pointage_mail
+    try:
+        settings = pointage_mail.settings()
+        return jsonify(mode=settings['mode'], available=True)
+    except ValueError:
+        return jsonify(mode='disabled', available=False)
+
+
+@app.route('/send-pointage', methods=['POST'])
+@require_responsible
+def send_pointage():
+    import pointage_mail
+    if request.content_length is None or request.content_length > 16 * 1024 * 1024:
+        return jsonify(state='not_sent'), 413
+    data = request.get_json(silent=True)
+    try:
+        settings = pointage_mail.settings()
+        pointage_mail.validate(data, settings)
+    except (ValueError, TypeError, KeyError):
+        return jsonify(state='not_sent'), 400
+    generated = app.make_response(build_planning_response(data))
+    if generated.status_code != 200:
+        return jsonify(state='not_sent'), generated.status_code
+    try:
+        state = pointage_mail.deliver(app.config['BAD_POINTAGE_AUTH_FILE'], settings,
+                                      data, generated.get_json()['file'])
+        return jsonify(state=state, mode=settings['mode'])
+    except Exception:
+        # Neither SMTP exceptions nor payloads may enter technical logs.
+        app.logger.warning('Envoi pointage: resultat indisponible')
+        return jsonify(state='uncertain'), 503
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
