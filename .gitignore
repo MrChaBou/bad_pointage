@@ -10,6 +10,8 @@ __pycache__/
 old_bad/
 old_doc/
 En ligne/
+Secret/
+
 # Dépendances des tests synthétiques
 tests/node_modules/
 

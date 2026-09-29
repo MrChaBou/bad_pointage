@@ -97,6 +97,11 @@ async function openAccess(token, data) {
     updateParticipantsUI();
     void checkBackendStatus();
     if (!planningFileContent) await restorePlanningSource();
+    // La restauration et toute session active priment sur une nouvelle source Drive.
+    if (epoch === accessEpoch && accessAllowed() && !activeSession &&
+        !planningSource && !planningWorkbook && !planningFileContent) {
+        await loadCentralPlanning();
+    }
 }
 
 async function submitAccess(event) {

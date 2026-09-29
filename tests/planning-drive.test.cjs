@@ -144,3 +144,90 @@ test('Reset pendant téléchargement ne réinstalle pas de source', async () => 
     assert.equal(app.run('planningSource'), null);
     assert.equal(await app.run('planningStorage.read()'), undefined);
 });
+
+test('auth réussie sans source : chargement automatique unique et configuration visible', async () => {
+    let calls = 0;
+    const app = boot({ authenticated: false, driveFetch: async () => { calls++; return response(fixture()); } });
+    await app.run('init()');
+    assert.equal(calls, 0);
+    await app.run('submitAccess()');
+    assert.equal(calls, 1);
+    assert.equal(app.run('planningSource.origin'), 'drive');
+    assert.equal(app.get('planningConfig').classList.contains('hidden'), false);
+    assert.equal(app.run('activeSession'), null);
+    await app.run('logoutAccess();');
+    await app.run('submitAccess()');
+    assert.equal(calls, 1, 'La source en mémoire avant démarrage est conservée à la reconnexion');
+});
+
+test('échec automatique : accès ouvert, relance centrale et secours manuel disponibles', async () => {
+    let calls = 0;
+    const app = boot({ authenticated: false, driveFetch: async () => {
+        calls++;
+        return calls === 1 ? { ok: false, status: 503, json: async () => ({ error: 'drive_unavailable' }) }
+            : response(fixture());
+    } });
+    await app.run('init()');
+    await app.run('submitAccess()');
+    assert.equal(app.run('accessAllowed()'), true);
+    assert.match(app.get('planningStorageStatus').textContent, /Réessayez ou importez un fichier de secours/);
+    assert.equal(app.get('loadCentralPlanningButton').disabled, false);
+    assert.equal(app.get('loadCentralPlanningButton').hidden, false);
+    await app.get('loadCentralPlanningButton').events.click();
+    assert.equal(calls, 2);
+    assert.equal(app.run('planningSource.origin'), 'drive');
+    await app.load(file(fixture('SECOURS FICTIF')));
+    assert.equal(app.run('planningSource.origin'), 'manual');
+});
+
+test('F5 authentifié : restauration locale attendue, jamais de Drive même si source perdue', async () => {
+    for (const missing of [false, true]) {
+        let calls = 0;
+        const driveFetch = async () => { calls++; return response(fixture()); };
+        const app = boot({ authenticated: false, driveFetch });
+        await app.run('submitAccess()');
+        await app.start();
+        if (missing) await app.run('planningStorage.clear()');
+        const next = boot({ authenticated: false, driveFetch, localStorage: app.localStorage,
+            indexedDB: app.indexedDB, sessionStorage: app.sessionStorage });
+        const gate = deferred();
+        next.context.restoreGate = gate;
+        next.run('originalRead = planningStorage.read; planningStorage.read = async () => { await restoreGate.promise; return originalRead(); }');
+        const pending = next.run('init()');
+        // Laisser la validation auth atteindre la restauration suspendue.
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(calls, 1);
+        gate.resolve();
+        await pending;
+        assert.equal(calls, 1);
+        assert.equal(!!next.run('planningSource'), !missing);
+        assert.ok(next.run('activeSession.sourceHash'));
+    }
+});
+
+test('auth refusée et logout pendant restauration ne déclenchent pas Drive', async () => {
+    let calls = 0;
+    const driveFetch = async () => { calls++; return response(fixture()); };
+    const denied = boot({ authenticated: false, driveFetch,
+        authFetch: async () => ({ ok: false, status: 401 }) });
+    await denied.run('submitAccess()');
+    assert.equal(calls, 0);
+    const app = boot({ authenticated: false, driveFetch });
+    const gate = deferred();
+    app.context.restoreGate = gate;
+    app.run('restorePlanningSource = async () => { await restoreGate.promise; }');
+    const pending = app.run('submitAccess()');
+    await new Promise(resolve => setImmediate(resolve));
+    app.run('lockAccess()');
+    gate.resolve();
+    await pending;
+    assert.equal(calls, 0);
+});
+
+test('secours : aide native au survol et action centrale de relance', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.match(html, /<button[^>]*title="En cas de problème avec le planning central,[^"]*ne modifie pas le fichier officiel du Drive\."[^>]*>Importer un fichier — secours<\/button>/);
+    assert.match(html, /id="loadCentralPlanningButton"[^>]*>Recharger le planning central<\/button>/);
+});

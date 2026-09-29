@@ -208,7 +208,7 @@ test('réponse tardive de démarrage après logout : aucune nouvelle session mé
 
 test('UI : chargement BACLY et démarrage masqué pendant le pointage, y compris après F5', async () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-    assert.match(html, /<button[^>]*class="[^"]*bacly-primary[^"]*"[^>]*>Charger le planning central<\/button>/);
+    assert.match(html, /<button[^>]*class="[^"]*bacly-primary[^"]*"[^>]*>Recharger le planning central<\/button>/);
     const { app, bytes } = await ready();
     app.run('updateUI()');
     assert.equal(app.get('startPointageButton').hidden, true);
