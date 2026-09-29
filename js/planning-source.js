@@ -148,6 +148,7 @@ async function loadCentralPlanning() {
     const isCurrent = () => operation === planningOperation && epoch === accessEpoch &&
         accessAllowed() && !activeSession && !planningResetting;
     planningBusy = true;
+    document.getElementById('planningFallback').hidden = true;
     planningStorageMessage = 'Chargement du planning central…';
     updateStartButton();
     updatePlanningExportUI();
@@ -190,9 +191,11 @@ async function loadCentralPlanning() {
         }
         if (!isCurrent()) return;
         installPlanningSource(prepared.source, prepared.workbook);
+        document.getElementById('planningFallback').hidden = true;
         planningStorageMessage = 'Planning central chargé.';
     } catch (error) {
         if (!isCurrent()) return;
+        document.getElementById('planningFallback').hidden = false;
         planningStorageMessage = (error.name === 'AbortError' ? driveMessages.drive_timeout :
             (Object.values(driveMessages).includes(error.message) ? error.message : 'Chargement du planning central impossible.')) +
             ' Réessayez ou importez un fichier de secours.';

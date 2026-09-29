@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Déploiement frontend : remplacer partout la version commune ?v= dans ce fichier
          à chaque changement CSS/JS. Garder la même version entre deux déploiements. -->
-    <link rel="stylesheet" href="css/app.css?v=2026.09.29.1">
+    <link rel="stylesheet" href="css/app.css?v=2026.09.29.2">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="max-w-md mx-auto px-4 py-6">
@@ -141,8 +141,11 @@
                 <h3 class="text-lg font-bold text-gray-900 mb-4">⚙️ Choisir son créneau</h3>
                 <div class="mb-4">
                     <button id="loadCentralPlanningButton" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium mb-3">Recharger le planning central</button>
-                    <input type="file" id="planningFile" accept=".xlsx, .xls" class="hidden">
-                    <button onclick="document.getElementById('planningFile').click()" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium" title="En cas de problème avec le planning central, vous pouvez charger une copie Excel pour continuer le pointage. Cette copie est temporaire : elle ne modifie pas le fichier officiel du Drive.">Importer un fichier — secours</button>
+                    <div id="planningFallback" hidden>
+                        <input type="file" id="planningFile" accept=".xlsx, .xls" class="hidden">
+                        <button onclick="document.getElementById('planningFile').click()" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium" title="En cas de problème avec le planning central, vous pouvez charger une copie Excel pour continuer le pointage. Cette copie est temporaire : elle ne modifie pas le fichier officiel du Drive.">Importer un fichier — secours</button>
+                        <p class="text-sm text-gray-600 mt-2">À utiliser seulement si le planning central ne peut pas être chargé. Le fichier importé permet de continuer le pointage, sans modifier le fichier officiel du Drive.</p>
+                    </div>
                     <p id="planningFileName" class="text-xs text-gray-500 mt-2 text-center"></p>
                     <p id="planningDriveInfo" class="text-xs text-gray-500 mt-2"></p>
                     <p id="planningStorageStatus" role="status" class="text-sm text-gray-600 mt-2"></p>
@@ -178,15 +181,15 @@
         </div>
     </div>
 
-<script src="js/state.js?v=2026.09.29.1"></script>
-<script src="js/auth.js?v=2026.09.29.1"></script>
-<script src="js/ui.js?v=2026.09.29.1"></script>
-<script src="js/pointage.js?v=2026.09.29.1"></script>
-<script src="js/planning-storage.js?v=2026.09.29.1"></script>
-<script src="js/planning-source.js?v=2026.09.29.1"></script>
-<script src="js/planning.js?v=2026.09.29.1"></script>
-<script src="js/export-styles.js?v=2026.09.29.1"></script>
-<script src="js/export.js?v=2026.09.29.1"></script>
-<script src="js/app.js?v=2026.09.29.1"></script>
+<script src="js/state.js?v=2026.09.29.2"></script>
+<script src="js/auth.js?v=2026.09.29.2"></script>
+<script src="js/ui.js?v=2026.09.29.2"></script>
+<script src="js/pointage.js?v=2026.09.29.2"></script>
+<script src="js/planning-storage.js?v=2026.09.29.2"></script>
+<script src="js/planning-source.js?v=2026.09.29.2"></script>
+<script src="js/planning.js?v=2026.09.29.2"></script>
+<script src="js/export-styles.js?v=2026.09.29.2"></script>
+<script src="js/export.js?v=2026.09.29.2"></script>
+<script src="js/app.js?v=2026.09.29.2"></script>
 </body>
 </html>

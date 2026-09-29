@@ -171,10 +171,12 @@ test('échec automatique : accès ouvert, relance centrale et secours manuel dis
     await app.run('submitAccess()');
     assert.equal(app.run('accessAllowed()'), true);
     assert.match(app.get('planningStorageStatus').textContent, /Réessayez ou importez un fichier de secours/);
+    assert.equal(app.get('planningFallback').hidden, false);
     assert.equal(app.get('loadCentralPlanningButton').disabled, false);
     assert.equal(app.get('loadCentralPlanningButton').hidden, false);
     await app.get('loadCentralPlanningButton').events.click();
     assert.equal(calls, 2);
+    assert.equal(app.get('planningFallback').hidden, true);
     assert.equal(app.run('planningSource.origin'), 'drive');
     await app.load(file(fixture('SECOURS FICTIF')));
     assert.equal(app.run('planningSource.origin'), 'manual');
@@ -230,4 +232,19 @@ test('secours : aide native au survol et action centrale de relance', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     assert.match(html, /<button[^>]*title="En cas de problème avec le planning central,[^"]*ne modifie pas le fichier officiel du Drive\."[^>]*>Importer un fichier — secours<\/button>/);
     assert.match(html, /id="loadCentralPlanningButton"[^>]*>Recharger le planning central<\/button>/);
+});
+
+
+test('secours masqué dans le HTML et pendant le premier chargement central', async () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.match(html, /<div id="planningFallback" hidden>\s*<input[\s\S]*?Importer un fichier — secours[\s\S]*?À utiliser seulement si le planning central[\s\S]*?<\/div>/);
+    const gate = deferred();
+    const app = boot({ driveFetch: async () => { await gate.promise; return response(fixture()); } });
+    const pending = app.run('loadCentralPlanning()');
+    assert.equal(app.get('planningFallback').hidden, true);
+    gate.resolve();
+    await pending;
+    assert.equal(app.get('planningFallback').hidden, true);
 });
