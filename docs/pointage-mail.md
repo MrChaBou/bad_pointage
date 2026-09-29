@@ -1,14 +1,14 @@
 # Envoi volontaire du retour de pointage
 
-Incrément local du 29/09/2026, recette PILOTE encore nécessaire. Aucun mail réel
-n'a été envoyé pendant le développement. Aucun déploiement effectué.
+Premier envoi réel en mode test confirmé par le PILOTE le 30/09/2026.
+Ajustements de présentation du 30/09/2026 : recette UI/mail encore nécessaire.
 
 Dans Créneau, saisir facultativement la note (2 000 caractères maximum), puis
 « Envoyer le pointage par mail ». Une confirmation indique explicitement le mode
 test ou production. Le téléchargement reste indépendant, y compris son fallback
 local. L'envoi utilise la génération backend existante, avec la source figée et
 les présences courantes ; aucune lecture ni écriture Drive pendant cet envoi.
-Le corps contient le créneau, la date, l'heure UTC de tentative, la modification
+Le corps contient le créneau, la date, l'heure de tentative en Europe/Paris, la modification
 Drive disponible, le hash source, les compteurs, la note et le nom du fichier.
 
 La source IndexedDB et l'état local sont sauvegardés avant la requête d'envoi.
@@ -38,7 +38,7 @@ import**, hors dépôt et hors répertoire public, puis recharger l'application 
 | `BAD_POINTAGE_MAIL_PASSWORD` | Secret SMTP / mot de passe d'application |
 
 Aucune nouvelle dépendance Python. Déployer `pointage_mail.py` avec `flask_app.py`
-et les assets frontend versionnés `2026.09.29.4`. La configuration auth existante
+et les assets frontend versionnés `2026.09.30.1`. La configuration auth existante
 `BAD_POINTAGE_AUTH_FILE` reste requise. Son répertoire privé (mode 0700) doit être
 accessible en écriture aux workers : une base `<auth-file>.mail.sqlite3` adjacente
 est créée pour les reçus anti-doublon (UUID, empreinte de requête, état uniquement).

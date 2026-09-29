@@ -220,11 +220,13 @@ function updatePointageMailUI() {
     document.getElementById('sendPointageBtn').disabled = pointageMailBusy || !!getPlanningExportError();
     const state = activeSession?.mail?.state;
     document.getElementById('pointageMailMessage').textContent = pointageMailBusy ? 'Envoi en cours…' : ({
-        sent: 'Dernière tentative : envoyée au serveur mail.',
+        sent: activeSession?.mail?.mode === 'test'
+            ? 'Envoi réussi — le pointage a été envoyé à l’adresse de test configurée.'
+            : 'Envoi réussi — le pointage a été envoyé à Julien.',
         not_sent: 'Envoi non effectué. Vous pouvez réessayer ou télécharger le fichier.',
         uncertain: 'État incertain. Vérifiez la réception avant de renvoyer.'
     }[state] || 'Non envoyé.');
-    if (activeSession?.mail?.mode === 'test') {
+    if (activeSession?.mail?.mode === 'test' && (state !== 'sent' || pointageMailBusy)) {
         document.getElementById('pointageMailMessage').textContent += ' Mode test.';
     }
 }

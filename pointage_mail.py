@@ -7,7 +7,8 @@ import re
 import smtplib
 import sqlite3
 import ssl
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from email.message import EmailMessage
 from auth_store import AuthStore
 
@@ -84,17 +85,32 @@ def deliver(path, config, data, attachment):
     message = EmailMessage()
     message['From'] = config['sender']
     message['To'] = config['to']
-    message['Subject'] = ('[TEST] ' if config['mode'] == 'test' else '') + 'Retour de pointage'
+    # Business date has no timezone; only the sending timestamp is localized.
+    business_date = data['date']
+    for pattern in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+        try:
+            business_date = datetime.strptime(data['date'], pattern).strftime('%d-%m-%Y')
+            break
+        except ValueError:
+            continue
+    # Worksheet names may contain newlines; a mail subject must stay on one line.
+    subject_sheet = ' '.join(data['sheet'].split())
+    subject_date = ' '.join(business_date.split())
+    message['Subject'] = ('[TEST] ' if config['mode'] == 'test' else '') + (
+        f'Pointage du créneau {subject_sheet} — {subject_date}')
     message['Message-ID'] = '<' + data['attemptId'] + '@bad-pointage.invalid>'
+    attempted_at = datetime.now(ZoneInfo('Europe/Paris')).strftime('%d-%m-%Y à %H:%M:%S (%Z)')
     message.set_content('\n'.join([
-        'Créneau : ' + data['sheet'], 'Date : ' + data['date'],
-        'Tentative (UTC) : ' + datetime.now(timezone.utc).isoformat(),
-        'Source modifiée : ' + (data['sourceModified'] or 'non disponible'),
-        'SHA-256 source : ' + data['sourceHash'],
-        f"Participants : {data['participants']}", f"Présents : {len(data['presences'])}",
+        'Bonjour Julien,', 'Voici le pointage suivant :', '',
+        'Créneau : ' + data['sheet'], 'Date : ' + business_date,
+        f"Participants inscrits : {data['participants']}", f"Présents : {len(data['presences'])}",
         f"Absents : {data['participants'] - len(data['presences'])}",
-        f"ESSAI : {data['essais']}", 'Fichier : ' + data['filename'],
-        '', 'Note pour la réconciliation :', data['note']]))
+        f"En essai : {data['essais']}", 'Fichier : ' + data['filename'],
+        '', 'Note du responsable de créneau pour réconcilier le fichier ci-joint avec le fichier central :',
+        data['note'], '', 'Informations techniques',
+        'Tentative d’envoi : ' + attempted_at,
+        'Source modifiée : ' + (data['sourceModified'] or 'non disponible'),
+        'SHA-256 source : ' + data['sourceHash']]))
     message.add_attachment(base64.b64decode(attachment), maintype='application',
                            subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                            filename=data['filename'])

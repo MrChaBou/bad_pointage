@@ -1,6 +1,7 @@
 import base64
 import hashlib
 from io import BytesIO
+from datetime import datetime, timezone
 import os
 import smtplib
 import unittest
@@ -49,7 +50,20 @@ class PointageMailTests(unittest.TestCase):
         self.assertEqual(response.headers['Cache-Control'], 'no-store')
         message = self.smtp.send_message.call_args.args[0]
         self.assertEqual(message['To'], 'test@example.invalid')
-        self.assertIn('[TEST]', message['Subject'])
+        self.assertEqual(message['Subject'], '[TEST] Pointage du créneau Test — 29-09-2026')
+        body = message.get_body().get_content()
+        self.assertTrue(body.startswith('Bonjour Julien,\nVoici le pointage suivant :\n'))
+        for line in ('Date : 29-09-2026', 'Participants inscrits : 1', 'Présents : 1',
+                     'Absents : 0', 'En essai : 1', 'Fichier : maj_test.xlsx',
+                     'Note du responsable de créneau pour réconcilier le fichier ci-joint avec le fichier central :'):
+            self.assertIn(line, body)
+        business, technical = body.split('Informations techniques\n')
+        self.assertIn(self.data['note'], business)
+        for label in ('Tentative d’envoi :', 'Source modifiée :', 'SHA-256 source :'):
+            self.assertNotIn(label, business)
+            self.assertIn(label, technical)
+        self.assertTrue(technical.rstrip().endswith(self.data['sourceHash']))
+        self.assertEqual(next(message.iter_attachments()).get_filename(), 'maj_test.xlsx')
         self.assertIn(self.data['note'], message.get_body().get_content())
         ws = openpyxl.load_workbook(BytesIO(next(message.iter_attachments()).get_payload(decode=True))).active
         self.assertEqual(ws['D4'].value, 'ESSAI PRESENT')
@@ -86,6 +100,8 @@ class PointageMailTests(unittest.TestCase):
             self.data['mode'] = 'production'
             self.assertEqual(self.send().json['state'], 'sent')
         self.assertEqual(self.smtp.send_message.call_args.args[0]['To'], 'production@example.invalid')
+        self.assertEqual(self.smtp.send_message.call_args.args[0]['Subject'],
+                         'Pointage du créneau Test — 29-09-2026')
 
     def test_auth_failure_and_uncertain_transport(self):
         self.smtp.login.side_effect = smtplib.SMTPAuthenticationError(535, b'synthetic')
@@ -96,3 +112,15 @@ class PointageMailTests(unittest.TestCase):
         self.assertEqual(self.send().json['state'], 'uncertain')
         self.assertEqual(self.send().json['state'], 'uncertain')
         self.smtp.send_message.assert_called_once()
+
+    def test_local_attempt_time_respects_summer_and_winter(self):
+        for month, expected in ((7, '01-07-2026 à 14:30:00 (CEST)'),
+                                (1, '01-01-2026 à 13:30:00 (CET)')):
+            with self.subTest(month=month):
+                self.data['attemptId'] = f'{month}2345678-1234-1234-1234-123456789012'
+                instant = datetime(2026, month, 1, 12, 30, tzinfo=timezone.utc)
+                with patch('pointage_mail.datetime', wraps=datetime) as clock:
+                    clock.now.side_effect = lambda tz: instant.astimezone(tz)
+                    self.assertEqual(self.send().json['state'], 'sent')
+                body = self.smtp.send_message.call_args.args[0].get_body().get_content()
+                self.assertIn('Tentative d’envoi : ' + expected, body)

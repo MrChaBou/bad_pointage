@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Déploiement frontend : remplacer partout la version commune ?v= dans ce fichier
          à chaque changement CSS/JS. Garder la même version entre deux déploiements. -->
-    <link rel="stylesheet" href="css/app.css?v=2026.09.29.4">
+    <link rel="stylesheet" href="css/app.css?v=2026.09.30.1">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="max-w-md mx-auto px-4 py-6">
@@ -162,17 +162,17 @@
                 </div>
             </div>
             <div class="bg-white rounded-xl p-6 mb-6 shadow-sm border">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">💾 2. Exporter les présences</h3>
+                <h3 class="text-lg font-bold text-gray-900 mb-4">✉️ 2. Envoyer le pointage</h3>
                 <div class="flex items-center text-sm mb-4 p-3 rounded-lg" id="backendStatus">
                     <span class="mr-2 text-xl" id="backendIcon">🔄</span>
                     <span id="backendText">Vérification du serveur...</span>
                 </div>
-                <button onclick="downloadPlanning()" id="downloadBtn" class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50" disabled>📥 Télécharger le planning mis à jour</button>
-                <p id="downloadMessage" class="text-xs text-center mt-2"></p>
-                <label for="pointageNote" class="block text-sm font-medium mt-4">Note pour la réconciliation (facultatif)</label>
-                <textarea id="pointageNote" maxlength="2000" rows="3" disabled oninput="savePointageNote()" class="w-full p-3 border rounded-lg" placeholder="Présents absents de la liste, anomalies…"></textarea>
+                <label for="pointageNote" class="block text-sm font-medium mt-4">Note du responsable de créneau pour réconcilier le fichier ci-joint avec le fichier central :</label>
+                <textarea id="pointageNote" maxlength="2000" rows="3" disabled oninput="savePointageNote()" class="w-full p-3 border rounded-lg" placeholder="Facultatif : présents absents de la liste, anomalies…"></textarea>
                 <button onclick="sendPointage()" id="sendPointageBtn" disabled class="w-full bacly-primary text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50">Envoyer le pointage par mail</button>
                 <p id="pointageMailMessage" role="status" class="text-sm mt-2"></p>
+                <button onclick="downloadPlanning()" id="downloadBtn" class="w-full mt-4 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 py-3 px-4 rounded-lg font-medium disabled:opacity-50" disabled>📥 Télécharger le planning mis à jour</button>
+                <p id="downloadMessage" class="text-xs text-center mt-2"></p>
             </div>
             <div class="bg-white rounded-xl p-6 shadow-sm border">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">⚠️ Zone de danger</h3>
@@ -185,15 +185,15 @@
         </div>
     </div>
 
-<script src="js/state.js?v=2026.09.29.4"></script>
-<script src="js/auth.js?v=2026.09.29.4"></script>
-<script src="js/ui.js?v=2026.09.29.4"></script>
-<script src="js/pointage.js?v=2026.09.29.4"></script>
-<script src="js/planning-storage.js?v=2026.09.29.4"></script>
-<script src="js/planning-source.js?v=2026.09.29.4"></script>
-<script src="js/planning.js?v=2026.09.29.4"></script>
-<script src="js/export-styles.js?v=2026.09.29.4"></script>
-<script src="js/export.js?v=2026.09.29.4"></script>
-<script src="js/app.js?v=2026.09.29.4"></script>
+<script src="js/state.js?v=2026.09.30.1"></script>
+<script src="js/auth.js?v=2026.09.30.1"></script>
+<script src="js/ui.js?v=2026.09.30.1"></script>
+<script src="js/pointage.js?v=2026.09.30.1"></script>
+<script src="js/planning-storage.js?v=2026.09.30.1"></script>
+<script src="js/planning-source.js?v=2026.09.30.1"></script>
+<script src="js/planning.js?v=2026.09.30.1"></script>
+<script src="js/export-styles.js?v=2026.09.30.1"></script>
+<script src="js/export.js?v=2026.09.30.1"></script>
+<script src="js/app.js?v=2026.09.30.1"></script>
 </body>
 </html>

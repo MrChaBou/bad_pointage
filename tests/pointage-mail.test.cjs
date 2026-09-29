@@ -108,3 +108,24 @@ test('source persistence failure prevents mail and retains local export', async 
     await app.run('downloadPlanning()');
     assert.equal(app.downloads.length, 1);
 });
+
+test('success messages identify the configured test recipient or Julien exactly', async () => {
+    const { app } = await ready();
+    app.run("activeSession.mail = {state: 'sent', mode: 'test'}; updatePointageMailUI()");
+    assert.equal(app.get('pointageMailMessage').textContent,
+        'Envoi réussi — le pointage a été envoyé à l’adresse de test configurée.');
+    app.run("activeSession.mail.mode = 'production'; updatePointageMailUI()");
+    assert.equal(app.get('pointageMailMessage').textContent,
+        'Envoi réussi — le pointage a été envoyé à Julien.');
+});
+
+test('note and primary send precede the secondary download action', () => {
+    const fs = require('node:fs'), path = require('node:path');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    assert.ok(html.indexOf('id="pointageNote"') < html.indexOf('id="sendPointageBtn"'));
+    assert.ok(html.indexOf('id="sendPointageBtn"') < html.indexOf('id="downloadBtn"'));
+    const buttons = [...html.matchAll(/<button\b[^>]+>/g)].map(match => match[0]);
+    assert.match(buttons.find(button => button.includes('id="sendPointageBtn"')), /bacly-primary/);
+    assert.doesNotMatch(buttons.find(button => button.includes('id="downloadBtn"')), /bacly-primary/);
+    assert.ok(html.includes('Note du responsable de créneau pour réconcilier le fichier ci-joint avec le fichier central :'));
+});
